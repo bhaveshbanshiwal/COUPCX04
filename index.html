@@ -1,0 +1,2360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>COUP — Tabletop Digital Companion (2–6 Players)</title>
+  <!-- PeerJS for Serverless GitHub Pages WebRTC Multiplayer -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-deep: #090b10;
+      --bg-panel: #121621;
+      --bg-card: #1a2030;
+      --border-gold: #c9a24d;
+      --border-subtle: rgba(201, 162, 77, 0.25);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --accent-gold: #f59e0b;
+      --accent-crimson: #e11d48;
+      --accent-emerald: #10b981;
+      --card-radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #1c192b 0%, var(--bg-deep) 75%);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1.25rem;
+      background: rgba(9, 11, 16, 0.92);
+      border-bottom: 1px solid var(--border-subtle);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .brand-logo {
+      font-family: 'Cinzel', serif;
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      background: linear-gradient(135deg, #fff 0%, #f59e0b 55%, #b45309 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-sub {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      display: block;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* BUTTONS */
+    .btn {
+      padding: 0.55rem 0.95rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.84rem;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: var(--bg-card);
+      color: var(--text-main);
+      transition: all 0.16s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: var(--border-gold);
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      border-color: #fbbf24;
+      color: #fff;
+    }
+
+    .btn-crimson {
+      background: linear-gradient(135deg, #e11d48 0%, #9f1239 100%);
+      border-color: #fb7185;
+      color: #fff;
+    }
+
+    .btn-emerald {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      border-color: #34d399;
+      color: #fff;
+    }
+
+    main {
+      flex: 1;
+      max-width: 1280px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    /* LOBBY */
+    .lobby-grid {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 1.25rem;
+      margin-top: 0.5rem;
+    }
+
+    @media (max-width: 860px) {
+      .lobby-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: rgba(18, 22, 33, 0.94);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 1.25rem;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    .box-showcase {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .box-cover-wrapper {
+      width: 210px;
+      height: 285px;
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      border: 2px solid var(--border-gold);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.7);
+      background: #1a1528;
+    }
+
+    .box-cover-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: calc(var(--card-radius) - 2px);
+    }
+
+    .input-group {
+      margin-bottom: 0.9rem;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 0.68rem 0.85rem;
+      background: #090b10;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--accent-gold);
+    }
+
+    .mode-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 0.65rem;
+      text-align: center;
+      background: #090b10;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.82rem;
+    }
+
+    .mode-tab.active {
+      border-color: var(--accent-gold);
+      background: rgba(245, 158, 11, 0.14);
+      color: #fbbf24;
+    }
+
+    .room-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #fbbf24;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px dashed #fbbf24;
+      padding: 0.4rem 0.9rem;
+      border-radius: 10px;
+      letter-spacing: 0.16em;
+      display: inline-block;
+    }
+
+    .lobby-players-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+      gap: 0.65rem;
+      margin: 0.9rem 0;
+    }
+
+    .lobby-seat {
+      background: #090b10;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 0.7rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .lobby-seat.occupied {
+      border-color: rgba(245, 158, 11, 0.5);
+      background: rgba(245, 158, 11, 0.06);
+    }
+
+    .seat-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #1f2937;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.78rem;
+      color: var(--accent-gold);
+    }
+
+    /* GAME TABLE SCREEN */
+    #gameScreen {
+      display: none;
+    }
+
+    .court-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(90deg, rgba(18,22,33,0.96), rgba(30,27,46,0.96), rgba(18,22,33,0.96));
+      border: 1px solid var(--border-gold);
+      border-radius: 14px;
+      padding: 0.8rem 1.15rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.85rem;
+    }
+
+    .court-stat {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .coin-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #fde047, #ca8a04);
+      border: 2px solid #fef08a;
+      box-shadow: 0 0 10px rgba(234, 179, 8, 0.45);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #422006;
+      font-size: 0.9rem;
+    }
+
+    /* ALERT / CHALLENGE / BLOCK BANNER */
+    .phase-banner {
+      background: rgba(225, 29, 72, 0.14);
+      border: 2px solid #f43f5e;
+      border-radius: 14px;
+      padding: 1rem 1.2rem;
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      animation: pulseBorder 2s infinite;
+    }
+
+    @keyframes pulseBorder {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.35); }
+      50% { box-shadow: 0 0 18px 2px rgba(244, 63, 94, 0.55); }
+    }
+
+    .phase-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fda4af;
+    }
+
+    .response-controls {
+      display: flex;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    /* NO-BLUFF CARD REVEAL BANNER */
+    .proof-banner {
+      background: rgba(16, 185, 129, 0.14);
+      border: 2px solid #10b981;
+      border-radius: 16px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .proof-card-thumb {
+      width: 76px;
+      height: 106px;
+      border-radius: 12px;
+      object-fit: cover;
+      border: 2px solid #34d399;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.6);
+    }
+
+    /* PLAYERS GRID */
+    .game-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1.15rem;
+    }
+
+    @media (max-width: 1024px) {
+      .game-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .seats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(265px, 1fr));
+      gap: 0.95rem;
+      margin-bottom: 1.15rem;
+    }
+
+    .player-pod {
+      background: var(--bg-panel);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 0.95rem;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .player-pod.active-turn {
+      border: 2px solid var(--accent-gold);
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.22);
+    }
+
+    .player-pod.is-me {
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(18, 22, 33, 0.95) 100%);
+    }
+
+    .player-pod.eliminated {
+      opacity: 0.42;
+      filter: grayscale(0.85);
+    }
+
+    .pod-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.7rem;
+    }
+
+    .player-name {
+      font-weight: 700;
+      font-size: 0.96rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      padding: 0.14rem 0.45rem;
+      border-radius: 6px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .badge-turn { background: var(--accent-gold); color: #000; }
+    .badge-you { background: #3b82f6; color: #fff; }
+
+    .player-coins {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #fde047;
+      background: rgba(250, 204, 21, 0.1);
+      padding: 0.2rem 0.55rem;
+      border-radius: 8px;
+      border: 1px solid rgba(250, 204, 21, 0.3);
+    }
+
+    /* INFLUENCE CARDS WITH ROUNDED CORNERS */
+    .cards-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem;
+    }
+
+    .influence-card {
+      border-radius: var(--card-radius);
+      height: 185px;
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      background: #10141f;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .influence-card.selectable {
+      cursor: pointer;
+      border-color: #f43f5e;
+      animation: pulseBorder 1.3s infinite;
+    }
+
+    .influence-card.selectable:hover {
+      transform: scale(1.03);
+    }
+
+    .influence-card.returned-slot {
+      background: rgba(9, 11, 16, 0.6);
+      border: 2px dashed rgba(255, 255, 255, 0.12);
+      box-shadow: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0.75rem;
+    }
+
+    .card-art {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: calc(var(--card-radius) - 2px);
+      z-index: 1;
+    }
+
+    .card-label-bar {
+      position: relative;
+      z-index: 2;
+      background: linear-gradient(to top, rgba(7, 9, 14, 0.96) 25%, rgba(7, 9, 14, 0.68) 80%, transparent);
+      padding: 0.55rem 0.45rem 0.45rem;
+      text-align: center;
+      border-bottom-left-radius: calc(var(--card-radius) - 2px);
+      border-bottom-right-radius: calc(var(--card-radius) - 2px);
+    }
+
+    .card-role-name {
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      font-size: 0.84rem;
+      letter-spacing: 0.06em;
+    }
+
+    .card-role-sub {
+      font-size: 0.64rem;
+      color: #cbd5e1;
+    }
+
+    /* ACTION COMMAND DECK */
+    .command-panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 1.1rem;
+    }
+
+    .action-category-title {
+      font-size: 0.73rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.55rem;
+      font-weight: 700;
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.6rem;
+      margin-bottom: 0.95rem;
+    }
+
+    .action-btn {
+      background: #171e2e;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 0.7rem 0.85rem;
+      text-align: left;
+      cursor: pointer;
+      color: var(--text-main);
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .action-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      border-color: var(--accent-gold);
+      background: #1e283c;
+    }
+
+    .action-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .action-btn-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+
+    .action-btn-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    .bluff-pill {
+      font-size: 0.6rem;
+      padding: 0.12rem 0.4rem;
+      border-radius: 5px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .pill-truth {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .pill-bluff {
+      background: rgba(244, 63, 94, 0.2);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.4);
+    }
+
+    /* LOG BOX */
+    .log-box {
+      height: 320px;
+      overflow-y: auto;
+      background: #080a0f;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 0.7rem;
+      font-size: 0.79rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.42rem;
+    }
+
+    .log-entry {
+      padding: 0.4rem 0.55rem;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border-left: 3px solid #4b5563;
+      line-height: 1.35;
+    }
+
+    .log-entry.claim { border-left-color: #f59e0b; }
+    .log-entry.challenge { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.08); }
+    .log-entry.block { border-left-color: #3b82f6; }
+    .log-entry.win { border-left-color: #10b981; background: rgba(16, 185, 129, 0.12); font-weight: 600; }
+
+    /* MODALS */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 7, 11, 0.85);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 1rem;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-gold);
+      border-radius: 18px;
+      max-width: 780px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 1.4rem;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 0.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .rules-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.85rem 0;
+      font-size: 0.82rem;
+    }
+
+    .rules-table th, .rules-table td {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 0.55rem;
+      text-align: left;
+    }
+
+    .rules-table th {
+      background: rgba(201, 162, 77, 0.15);
+      color: #fde047;
+    }
+
+    .perspective-switcher {
+      background: rgba(59, 130, 246, 0.14);
+      border: 1px solid #3b82f6;
+      padding: 0.4rem 0.75rem;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-size: 0.78rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header>
+    <div>
+      <span class="brand-logo">COUP</span>
+      <span class="brand-sub">Tabletop Digital Companion • 2–6 Players</span>
+    </div>
+
+    <div class="nav-actions">
+      <!-- Local Pass & Play Perspective Switcher -->
+      <div id="localPerspectiveBar" class="perspective-switcher" style="display:none;">
+        <span>👁️ Player:</span>
+        <select id="perspectiveSelect" class="input-field" style="padding:0.2rem 0.45rem; width:auto; font-size:0.78rem;" onchange="switchLocalPerspective(this.value)"></select>
+      </div>
+
+      <!-- Tabletop Screen Privacy Shield -->
+      <button id="peekToggleBtn" class="btn" style="display:none;" onclick="toggleCardPrivacy()">
+        🙈 Hide My Cards
+      </button>
+
+      <button class="btn btn-gold" onclick="openModal('rulesModal')">📜 Rules</button>
+      <button id="leaveBtn" class="btn btn-crimson" style="display:none;" onclick="resetToLobby()">🚪 Leave</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ================= LOBBY SCREEN ================= -->
+    <section id="lobbyScreen">
+      <div class="lobby-grid">
+        <!-- Product Box Showcase (Wired to images/box.jpg with rounded corners) -->
+        <div class="panel box-showcase">
+          <div class="box-cover-wrapper">
+            <img id="lobbyBoxImg" src="images/box.jpg" alt="Coup Box Cover" onerror="handleImageFallback(this, 'box')" />
+          </div>
+          <div>
+            <h3 style="font-family:'Cinzel',serif; color:#fbbf24; font-size:1rem;">Tabletop Mode (No Physical Cards/Coins Needed)</h3>
+            <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.35rem; line-height:1.45;">
+              Sit around the table with your friends! Each player joins on their phone. Everyone starts with <strong>0 Coins</strong> and <strong>2 Cards</strong>. Deck order is strictly maintained (Top Draw ↑ / Bottom Return ↓).
+            </p>
+          </div>
+        </div>
+
+        <!-- Multiplayer Host / Join Panel -->
+        <div class="panel">
+          <h2 style="font-family:'Cinzel',serif; margin-bottom:0.9rem; font-size:1.25rem;">Join Table (2 to 6 Players)</h2>
+
+          <div class="mode-tabs">
+            <div id="tabOnline" class="mode-tab active" onclick="selectLobbyTab('online')">📱 Multi-Phone P2P (Tabletop)</div>
+            <div id="tabLocal" class="mode-tab" onclick="selectLobbyTab('local')">🛋️ Single-Device Pass & Play</div>
+          </div>
+
+          <!-- ONLINE P2P CONTROLS -->
+          <div id="onlineControls">
+            <div class="input-group">
+              <label>Your Name</label>
+              <input type="text" id="playerNameInput" class="input-field" placeholder="Enter your name..." maxlength="18" />
+            </div>
+
+            <div style="display:flex; gap:0.65rem; flex-wrap:wrap; margin-bottom:1.15rem;">
+              <button class="btn btn-gold" onclick="hostOnlineRoom()">👑 Host Table</button>
+              <div style="display:flex; gap:0.4rem; flex:1; min-width:210px;">
+                <input type="text" id="joinCodeInput" class="input-field" placeholder="Enter Room Code" style="text-transform:uppercase;" />
+                <button class="btn btn-emerald" onclick="joinOnlineRoom()">Join Table</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SINGLE-DEVICE TEST CONTROLS -->
+          <div id="localControls" style="display:none;">
+            <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+              <input type="text" id="localPlayerNameInput" class="input-field" style="flex:1; min-width:160px;" placeholder="Player name..." maxlength="18" />
+              <button class="btn btn-emerald" onclick="addLocalPlayer()">+ Add Player</button>
+              <button class="btn" onclick="fillDemoPlayers()">⚡ Demo 4 Players</button>
+            </div>
+          </div>
+
+          <!-- WAITING ROOM SEATS -->
+          <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:1rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+              <div>
+                <span style="font-size:0.76rem; color:var(--text-muted); text-transform:uppercase;">Seated Players (<span id="seatCountText">0</span>/6):</span>
+                <div id="roomCodeDisplay" style="display:none; margin-top:0.35rem;">
+                  <span style="font-size:0.8rem; color:var(--text-muted);">Table Code: </span>
+                  <span id="roomCodeText" class="room-badge">------</span>
+                </div>
+              </div>
+              <button id="startGameBtn" class="btn btn-gold" onclick="startGame()" disabled>🎴 Deal Cards & Start (0 Coins)</button>
+            </div>
+
+            <div id="lobbySeatsContainer" class="lobby-players-list"></div>
+            <p id="networkStatusText" style="font-size:0.78rem; color:#9ca3af; margin-top:0.35rem;"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ACTIVE GAME SCREEN ================= -->
+    <section id="gameScreen">
+      <!-- Top Court & Treasury Bar -->
+      <div class="court-bar">
+        <div class="court-stat">
+          <div class="coin-icon">₹</div>
+          <div>
+            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Central Treasury</div>
+            <div style="font-weight:700; font-size:0.98rem;"><span id="treasuryCoinsText">50</span> Coins</div>
+          </div>
+        </div>
+
+        <div class="court-stat">
+          <div style="font-size:1.45rem;">🎴</div>
+          <div>
+            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Ordered Court Deck (FIFO)</div>
+            <div style="font-weight:700; font-size:0.95rem;">
+              <span id="courtDeckCountText">15</span> Cards <span style="font-size:0.72rem; color:#34d399; font-weight:500;">(Draw Top ↑ • Return Bottom ↓)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="court-stat">
+          <div>
+            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Current Turn</div>
+            <div id="turnStatusHeader" style="font-weight:700; font-size:1rem; color:#fbbf24;">Waiting...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No-Bluff Proof Reveal Banner (Only shown when a challenged player proves they HAVE the card!) -->
+      <div id="proofBanner" class="proof-banner" style="display:none;">
+        <div style="display:flex; align-items:center; gap:0.9rem;">
+          <img id="proofCardImg" class="proof-card-thumb" src="" alt="Revealed Card" />
+          <div>
+            <div id="proofBannerTitle" style="font-weight:800; font-size:1.02rem; color:#34d399;"></div>
+            <div id="proofBannerSub" style="font-size:0.82rem; color:#d1fae5; margin-top:0.2rem;"></div>
+          </div>
+        </div>
+        <button class="btn" onclick="dismissProofBanner()">✓ Dismiss</button>
+      </div>
+
+      <!-- Dynamic Challenge / Block / Quiet Card Return Banner -->
+      <div id="phaseBanner" class="phase-banner" style="display:none;">
+        <div id="phaseBannerTitle" class="phase-title"></div>
+        <div id="phaseBannerSub" style="font-size:0.83rem; color:#fecdd3;"></div>
+        <div id="phaseBannerButtons" class="response-controls"></div>
+      </div>
+
+      <div class="game-layout">
+        <!-- LEFT COLUMN: PLAYERS + ACTIONS -->
+        <div>
+          <!-- 2 to 6 Players Grid -->
+          <div id="seatsGrid" class="seats-grid"></div>
+
+          <!-- Turn Actions Panel -->
+          <div class="command-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.7rem; flex-wrap:wrap; gap:0.5rem;">
+              <h3 style="font-family:'Cinzel',serif; font-size:1rem; color:#fbbf24;">
+                ⚡ Turn Actions & Character Abilities
+              </h3>
+              <span id="mandatoryCoupWarning" style="display:none; color:#fb7185; font-size:0.78rem; font-weight:700;">
+                ⚠️ 10+ Coins: You MUST launch a Coup!
+              </span>
+            </div>
+
+            <div class="action-category-title">General Actions (No Character Needed)</div>
+            <div class="actions-grid" id="generalActionsGrid"></div>
+
+            <div class="action-category-title">Character Claims (Truth or Bluff)</div>
+            <div class="actions-grid" id="characterActionsGrid"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN: TABLE LOG & CHEAT SHEET -->
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+          <div class="panel" style="padding:0.95rem;">
+            <h4 style="font-family:'Cinzel',serif; margin-bottom:0.6rem; color:#fbbf24; font-size:0.95rem;">📜 Table Action Log</h4>
+            <div id="gameLogContainer" class="log-box"></div>
+          </div>
+
+          <div class="panel" style="padding:0.95rem; font-size:0.76rem;">
+            <h4 style="font-family:'Cinzel',serif; margin-bottom:0.45rem; color:#fbbf24; font-size:0.9rem;">🛡️ Character Reference</h4>
+            <div style="display:flex; flex-direction:column; gap:0.38rem; color:#d1d5db;">
+              <div><strong style="color:#c084fc;">🟣 Duke:</strong> Tax (+3 Coins) • Blocks Foreign Aid</div>
+              <div><strong style="color:#f87171;">🔴 Assassin:</strong> Assassinate (-3 Coins) • Blocked by Contessa</div>
+              <div><strong style="color:#60a5fa;">🔵 Captain:</strong> Steal (+2 Coins) • Blocked by Captain/Ambassador</div>
+              <div><strong style="color:#34d399;">🟢 Ambassador:</strong> Draw 2 from Top, Return 2 to Bottom • Blocks Steal</div>
+              <div><strong style="color:#f472b6;">🩷 Contessa:</strong> Blocks Assassination</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= MODAL 1: OFFICIAL + TABLETOP RULES ================= -->
+  <div id="rulesModal" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 style="font-family:'Cinzel',serif; color:#fbbf24; font-size:1.2rem;">📜 COUP Rules & Deck Mechanics</h2>
+        <button class="btn" onclick="closeModal('rulesModal')">✕ Close</button>
+      </div>
+
+      <div style="font-size:0.85rem; line-height:1.55; color:#e5e7eb; display:flex; flex-direction:column; gap:0.9rem;">
+        <div>
+          <h3 style="color:#fbbf24; margin-bottom:0.2rem;">1. Setup & Ordered Deck (2–6 Players)</h3>
+          <p>
+            The Court Deck contains exactly <strong>15 Cards</strong> (3× Duke, 3× Assassin, 3× Captain, 3× Ambassador, 3× Contessa).
+            Every player starts with <strong>0 Coins</strong> and <strong>2 Face-Down Cards</strong> dealt from the top of the deck.
+            The Court Deck order is strictly preserved: cards drawn always come from the <strong>TOP</strong>, and cards returned always go into the <strong>BOTTOM</strong>.
+          </p>
+        </div>
+
+        <div>
+          <h3 style="color:#fbbf24; margin-bottom:0.2rem;">2. Actions & Counteractions</h3>
+          <table class="rules-table">
+            <thead>
+              <tr>
+                <th>Character / Action</th>
+                <th>Action Effect</th>
+                <th>Counteraction (Block)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>General — Income</strong></td>
+                <td>Take +1 Coin from the Treasury.</td>
+                <td><em>Cannot be blocked or challenged.</em></td>
+              </tr>
+              <tr>
+                <td><strong>General — Foreign Aid</strong></td>
+                <td>Take +2 Coins from the Treasury.</td>
+                <td>Blocked by any player claiming <strong>Duke</strong>.</td>
+              </tr>
+              <tr>
+                <td><strong>General — Coup</strong></td>
+                <td>Pay 7 Coins. Target loses 1 card (mandatory at 10+ coins).</td>
+                <td><em>Unblockable & Unchallengeable.</em></td>
+              </tr>
+              <tr>
+                <td><strong style="color:#c084fc;">Duke — Tax</strong></td>
+                <td>Take +3 Coins from the Treasury.</td>
+                <td>Blocks <strong>Foreign Aid</strong>.</td>
+              </tr>
+              <tr>
+                <td><strong style="color:#f87171;">Assassin — Assassinate</strong></td>
+                <td>Pay 3 Coins. Target loses 1 card.</td>
+                <td>Blocked by target claiming <strong>Contessa</strong>.</td>
+              </tr>
+              <tr>
+                <td><strong style="color:#60a5fa;">Captain — Steal</strong></td>
+                <td>Steal up to 2 Coins from a target player.</td>
+                <td>Blocked by target claiming <strong>Captain</strong> or <strong>Ambassador</strong>.</td>
+              </tr>
+              <tr>
+                <td><strong style="color:#34d399;">Ambassador — Exchange</strong></td>
+                <td>Draw 2 cards from Top of Court Deck, keep your live count, quietly put 2 cards into Bottom of Court Deck.</td>
+                <td>Blocks <strong>Steal</strong>.</td>
+              </tr>
+              <tr>
+                <td><strong style="color:#f472b6;">Contessa — Block</strong></td>
+                <td><em>Reactive only.</em></td>
+                <td>Blocks <strong>Assassinate</strong>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h3 style="color:#fbbf24; margin-bottom:0.2rem;">3. Challenges & Card Visibility</h3>
+          <ul style="padding-left:1.2rem; display:flex; flex-direction:column; gap:0.35rem;">
+            <li><strong>When Challenged & You Have the Card (No Bluff):</strong> Your card is <strong>shown to the table</strong> to prove you were not bluffing. That card is then placed at the <strong>bottom of the Court Deck</strong>, and you draw a replacement card from the <strong>top of the Court Deck</strong>. The challenger loses 1 card.</li>
+            <li><strong>When Caught Bluffing (Or Losing a Card):</strong> Your card is <strong>not shown</strong> to the other players. You quietly choose 1 of your cards to put into the <strong>bottom of the Court Deck</strong>, reducing your active card count by 1.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 2: TARGET SELECTION ================= -->
+  <div id="targetModal" class="modal-backdrop">
+    <div class="modal-content" style="max-width:440px;">
+      <div class="modal-header">
+        <h3 style="font-family:'Cinzel',serif; color:#fbbf24;">Select Target Player</h3>
+        <button class="btn" onclick="closeModal('targetModal')">✕ Cancel</button>
+      </div>
+      <div id="targetPlayersList" style="display:flex; flex-direction:column; gap:0.55rem;"></div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL 3: AMBASSADOR EXCHANGE ================= -->
+  <div id="exchangeModal" class="modal-backdrop">
+    <div class="modal-content" style="max-width:640px;">
+      <div class="modal-header">
+        <h3 style="font-family:'Cinzel',serif; color:#34d399;">🟢 Ambassador Exchange (Top Draw ↑ / Bottom Return ↓)</h3>
+      </div>
+      <p id="exchangeInstructionText" style="font-size:0.84rem; color:var(--text-muted); margin-bottom:1rem;"></p>
+      <div id="exchangeCardsContainer" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:0.8rem; margin-bottom:1.15rem;"></div>
+      <button id="confirmExchangeBtn" class="btn btn-emerald" style="width:100%; justify-content:center;" onclick="submitAmbassadorExchange()" disabled>
+        Confirm Cards to Keep (Unchosen Go to Bottom of Deck)
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= GAME ENGINE & P2P SCRIPT ================= -->
+  <script>
+    /*************************************************************************
+     * 1. ROLES & IMAGE FOLDER WIRING (/images/*.jpg with rounded corners)
+     *************************************************************************/
+    const ROLES = {
+      Duke:       { name: 'Duke',       color: '#a855f7', file: 'images/duke.jpg' },
+      Assassin:   { name: 'Assassin',   color: '#ef4444', file: 'images/assassin.jpg' },
+      Captain:    { name: 'Captain',    color: '#3b82f6', file: 'images/captain.jpg' },
+      Ambassador: { name: 'Ambassador', color: '#10b981', file: 'images/ambassador.jpg' },
+      Contessa:   { name: 'Contessa',   color: '#ec4899', file: 'images/contessa.jpg' },
+      Hidden:     { name: 'Hidden',     color: '#cbd5e1', file: 'images/back.jpg' }
+    };
+
+    // Primary path points directly to your /images folder
+    function getCardImageSrc(role) {
+      if (ROLES[role]) return ROLES[role].file;
+      return 'images/back.jpg';
+    }
+
+    // Automatic fallback if an image is named .png or not uploaded yet
+    function handleImageFallback(imgEl, roleKey) {
+      const currentSrc = imgEl.getAttribute('src') || '';
+      if (currentSrc.endsWith('.jpg')) {
+        imgEl.src = currentSrc.replace('.jpg', '.png');
+        return;
+      }
+      imgEl.onerror = null;
+      imgEl.src = getBuiltInSvgDataUri(roleKey);
+    }
+
+    function getBuiltInSvgDataUri(role) {
+      const svgs = {
+        box: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#1e1b2e"/><circle cx="150" cy="185" r="82" fill="#831843" stroke="#f472b6" stroke-width="3"/><path d="M72 330 L102 195 L135 275 L165 275 L198 195 L228 330 Z" fill="#be123c"/><circle cx="150" cy="180" r="38" fill="#fbcfe8"/><text x="150" y="75" text-anchor="middle" fill="#fff" font-family="Cinzel,serif" font-weight="900" font-size="44" letter-spacing="8">COUP</text></svg>`,
+        Duke: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#2e1065"/><circle cx="150" cy="145" r="76" fill="#581c87" stroke="#c084fc" stroke-width="3"/><path d="M90 290 C90 215, 210 215, 210 290 Z" fill="#7e22ce"/><circle cx="150" cy="135" r="36" fill="#d8b4fe"/><circle cx="95" cy="70" r="15" fill="#eab308"/><circle cx="205" cy="70" r="15" fill="#eab308"/><circle cx="150" cy="52" r="15" fill="#eab308"/></svg>`,
+        Assassin: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#450a0a"/><circle cx="150" cy="145" r="76" fill="#7f1d1d" stroke="#f87171" stroke-width="3"/><path d="M85 290 L110 185 L190 185 L215 290 Z" fill="#1f2937"/><path d="M105 155 L150 80 L195 155 L180 195 L120 195 Z" fill="#111827" stroke="#f87171" stroke-width="2"/><rect x="122" y="138" width="56" height="10" rx="5" fill="#ef4444"/></svg>`,
+        Captain: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#172554"/><circle cx="150" cy="145" r="76" fill="#1e3a8a" stroke="#60a5fa" stroke-width="3"/><path d="M80 290 C85 215, 215 215, 220 290 Z" fill="#1d4ed8"/><circle cx="150" cy="142" r="35" fill="#bfdbfe"/><polygon points="108,118 192,118 178,92 122,92" fill="#1e40af" stroke="#facc15" stroke-width="2"/></svg>`,
+        Ambassador: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#064e3b"/><circle cx="150" cy="145" r="76" fill="#065f46" stroke="#34d399" stroke-width="3"/><path d="M90 290 C95 215, 205 215, 210 290 Z" fill="#047857"/><circle cx="150" cy="138" r="35" fill="#a7f3d0"/><rect x="92" y="185" width="32" height="46" rx="5" fill="#10b981" stroke="#fff" stroke-width="2"/><rect x="178" y="178" width="32" height="46" rx="5" fill="#10b981" stroke="#fff" stroke-width="2"/></svg>`,
+        Contessa: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#831843"/><circle cx="150" cy="145" r="76" fill="#9d174d" stroke="#f472b6" stroke-width="3"/><path d="M72 290 L102 155 L135 235 L165 235 L198 155 L228 290 Z" fill="#be123c"/><circle cx="150" cy="140" r="36" fill="#fbcfe8"/></svg>`,
+        Hidden: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#111827"/><rect x="18" y="18" width="264" height="384" rx="14" fill="none" stroke="#c9a24d" stroke-width="2" stroke-dasharray="8,6"/><circle cx="150" cy="210" r="52" fill="none" stroke="#c9a24d" stroke-width="2"/><text x="150" y="218" text-anchor="middle" fill="#c9a24d" font-family="Cinzel,serif" font-weight="900" font-size="24" letter-spacing="4">COUP</text></svg>`
+      };
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgs[role] || svgs.Hidden);
+    }
+
+    /*************************************************************************
+     * 2. STATE & SMOOTH PEER-TO-PEER NETWORKING
+     *************************************************************************/
+    let gameMode = 'online'; // 'online' | 'local'
+    let isHost = false;
+    let myPlayerId = 'p_host';
+    let hideMyCards = false; // Tabletop anti-peek toggle
+    let peer = null;
+    let hostConnection = null;
+    let clientConnections = {};
+    let lobbyPlayers = [];
+
+    let gameState = {
+      started: false,
+      treasury: 50,
+      deck: [], // Ordered FIFO queue: index 0 = TOP of deck, last index = BOTTOM of deck
+      players: [], // [{ id, name, coins: 0, cards: [{ role, lost }], alive }]
+      turnIndex: 0,
+      phase: 'TURN_DECISION',
+      pendingAction: null,
+      lossQueue: [],
+      exchangeData: null,
+      proofReveal: null, // Shown ONLY when a challenged player proves they have the card (No Bluff)
+      logs: []
+    };
+
+    function toggleCardPrivacy() {
+      hideMyCards = !hideMyCards;
+      const btn = document.getElementById('peekToggleBtn');
+      btn.textContent = hideMyCards ? '👁️ Peek My Cards' : '🙈 Hide My Cards';
+      renderGameScreen();
+    }
+
+    function selectLobbyTab(mode) {
+      gameMode = mode;
+      document.getElementById('tabOnline').classList.toggle('active', mode === 'online');
+      document.getElementById('tabLocal').classList.toggle('active', mode === 'local');
+      document.getElementById('onlineControls').style.display = mode === 'online' ? 'block' : 'none';
+      document.getElementById('localControls').style.display = mode === 'local' ? 'block' : 'none';
+      lobbyPlayers = [];
+      renderLobbySeats();
+    }
+
+    function renderLobbySeats() {
+      const container = document.getElementById('lobbySeatsContainer');
+      container.innerHTML = '';
+      document.getElementById('seatCountText').textContent = lobbyPlayers.length;
+
+      for (let i = 0; i < 6; i++) {
+        const p = lobbyPlayers[i];
+        const seat = document.createElement('div');
+        seat.className = 'lobby-seat' + (p ? ' occupied' : '');
+        seat.innerHTML = `
+          <div class="seat-num">${i + 1}</div>
+          <div style="font-size:0.86rem; font-weight:${p ? '600' : '400'}; color:${p ? '#fff' : '#6b7280'};">
+            ${p ? escapeHtml(p.name) : 'Open Seat'}
+          </div>
+        `;
+        container.appendChild(seat);
+      }
+
+      const canStart = (gameMode === 'local' || isHost) && lobbyPlayers.length >= 2 && lobbyPlayers.length <= 6;
+      document.getElementById('startGameBtn').disabled = !canStart;
+    }
+
+    function addLocalPlayer() {
+      if (lobbyPlayers.length >= 6) return alert('Max 6 players reached!');
+      const input = document.getElementById('localPlayerNameInput');
+      const name = input.value.trim() || `Player ${lobbyPlayers.length + 1}`;
+      lobbyPlayers.push({ id: 'local_' + Date.now() + '_' + lobbyPlayers.length, name });
+      input.value = '';
+      isHost = true;
+      myPlayerId = lobbyPlayers[0].id;
+      renderLobbySeats();
+    }
+
+    function fillDemoPlayers() {
+      lobbyPlayers = [
+        { id: 'p1', name: 'Bhavesh' },
+        { id: 'p2', name: 'Aarav' },
+        { id: 'p3', name: 'Priya' },
+        { id: 'p4', name: 'Vikram' }
+      ];
+      isHost = true;
+      myPlayerId = 'p1';
+      renderLobbySeats();
+    }
+
+    // PEERJS HOST & CLIENT
+    function generateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      return code;
+    }
+
+    function hostOnlineRoom() {
+      const name = document.getElementById('playerNameInput').value.trim() || 'Host';
+      const roomCode = generateRoomCode();
+      const fullPeerId = 'COUP_TABLE_' + roomCode;
+
+      document.getElementById('networkStatusText').textContent = 'Opening table room...';
+      peer = new Peer(fullPeerId);
+
+      peer.on('open', () => {
+        isHost = true;
+        myPlayerId = 'host_1';
+        lobbyPlayers = [{ id: myPlayerId, name }];
+        document.getElementById('roomCodeDisplay').style.display = 'block';
+        document.getElementById('roomCodeText').textContent = roomCode;
+        document.getElementById('networkStatusText').textContent = '✅ Table Ready! Have friends enter the 5-letter code on their phones.';
+        renderLobbySeats();
+      });
+
+      peer.on('connection', conn => {
+        conn.on('data', data => handleHostIncomingData(conn, data));
+        conn.on('close', () => {
+          delete clientConnections[conn.peer];
+          if (!gameState.started) {
+            lobbyPlayers = lobbyPlayers.filter(p => p.id !== conn.peer);
+            broadcastLobbyState();
+            renderLobbySeats();
+          }
+        });
+      });
+
+      peer.on('error', err => {
+        document.getElementById('networkStatusText').textContent = '⚠️ Network notice: ' + err.message;
+      });
+
+      // Keepalive heartbeat every 5s for smooth mobile tabletop play
+      setInterval(() => {
+        Object.values(clientConnections).forEach(conn => {
+          if (conn && conn.open) conn.send({ type: 'PING' });
+        });
+      }, 5000);
+    }
+
+    function joinOnlineRoom() {
+      const name = document.getElementById('playerNameInput').value.trim();
+      if (!name) return alert('Please enter your name first!');
+      const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+      if (!code) return alert('Please enter the Table Code!');
+
+      document.getElementById('networkStatusText').textContent = 'Joining table...';
+      peer = new Peer();
+
+      peer.on('open', myId => {
+        myPlayerId = myId;
+        isHost = false;
+        hostConnection = peer.connect('COUP_TABLE_' + code, { reliable: true });
+
+        hostConnection.on('open', () => {
+          document.getElementById('networkStatusText').textContent = '✅ Seated at Table ' + code + '! Waiting for Host to deal...';
+          hostConnection.send({ type: 'JOIN_REQUEST', name });
+        });
+
+        hostConnection.on('data', data => handleClientIncomingData(data));
+      });
+
+      peer.on('error', err => {
+        document.getElementById('networkStatusText').textContent = '❌ Connection error: ' + err.message;
+      });
+    }
+
+    function handleHostIncomingData(conn, data) {
+      if (data.type === 'JOIN_REQUEST') {
+        if (gameState.started || lobbyPlayers.length >= 6) {
+          conn.send({ type: 'JOIN_REJECTED', reason: 'Table is full or game already in progress.' });
+          return;
+        }
+        clientConnections[conn.peer] = conn;
+        lobbyPlayers.push({ id: conn.peer, name: data.name.slice(0, 18) });
+        renderLobbySeats();
+        broadcastLobbyState();
+      } else if (data.type === 'PLAYER_COMMAND') {
+        processPlayerCommand(conn.peer, data.command);
+      }
+    }
+
+    function handleClientIncomingData(data) {
+      if (data.type === 'PING') return;
+      if (data.type === 'LOBBY_UPDATE') {
+        lobbyPlayers = data.lobbyPlayers;
+        renderLobbySeats();
+      } else if (data.type === 'GAME_STATE_SYNC') {
+        gameState = data.state;
+        showActiveGameUI();
+        renderGameScreen();
+      } else if (data.type === 'JOIN_REJECTED') {
+        alert(data.reason);
+      }
+    }
+
+    function broadcastLobbyState() {
+      Object.values(clientConnections).forEach(conn => {
+        if (conn && conn.open) conn.send({ type: 'LOBBY_UPDATE', lobbyPlayers });
+      });
+    }
+
+    // Strict privacy: Each phone only receives its own live cards; all other cards & deck are hidden
+    function syncStateToAll() {
+      if (gameMode === 'local') {
+        renderGameScreen();
+        return;
+      }
+      renderGameScreen();
+
+      Object.entries(clientConnections).forEach(([peerId, conn]) => {
+        if (!conn || !conn.open) return;
+        const copy = JSON.parse(JSON.stringify(gameState));
+        copy.deck = new Array(gameState.deck.length).fill('Hidden');
+        copy.players.forEach(p => {
+          if (p.id !== peerId) {
+            p.cards.forEach(c => {
+              if (!c.lost) c.role = 'Hidden';
+            });
+          }
+        });
+        if (copy.exchangeData && copy.exchangeData.playerId !== peerId) {
+          copy.exchangeData.options = [];
+        }
+        conn.send({ type: 'GAME_STATE_SYNC', state: copy });
+      });
+    }
+
+    function sendCommand(command) {
+      if (gameMode === 'local' || isHost) {
+        processPlayerCommand(myPlayerId, command);
+      } else if (hostConnection && hostConnection.open) {
+        hostConnection.send({ type: 'PLAYER_COMMAND', command });
+      }
+    }
+
+    function showActiveGameUI() {
+      document.getElementById('lobbyScreen').style.display = 'none';
+      document.getElementById('gameScreen').style.display = 'block';
+      document.getElementById('leaveBtn').style.display = 'inline-flex';
+      document.getElementById('peekToggleBtn').style.display = 'inline-flex';
+    }
+
+    /*************************************************************************
+     * 3. ORDERED FIFO COURT DECK & 0-COIN START ENGINE
+     *************************************************************************/
+    // Shuffled ONLY once at initial deal; afterwards strictly Draw from TOP (shift), Return to BOTTOM (push)
+    function createInitialCourtDeck() {
+      const deck = [];
+      ['Duke', 'Assassin', 'Captain', 'Ambassador', 'Contessa'].forEach(role => {
+        for (let i = 0; i < 3; i++) deck.push(role); // 15 actual cards total
+      });
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      return deck;
+    }
+
+    function drawCardFromTop() {
+      return gameState.deck.shift(); // TOP of deck
+    }
+
+    function putCardInBottom(role) {
+      if (role && role !== 'Hidden') {
+        gameState.deck.push(role); // BOTTOM of deck (no reshuffle)
+      }
+    }
+
+    function startGame() {
+      if (lobbyPlayers.length < 2) return alert('At least 2 players are needed!');
+
+      const deck = createInitialCourtDeck();
+
+      // Deal 2 cards from TOP of deck to each player, and start everyone at 0 Coins!
+      const players = lobbyPlayers.map(lp => ({
+        id: lp.id,
+        name: lp.name,
+        coins: 0, // 0 starting coins regardless of player count (2–6)
+        alive: true,
+        cards: [
+          { role: deck.shift(), lost: false },
+          { role: deck.shift(), lost: false }
+        ]
+      }));
+
+      gameState = {
+        started: true,
+        treasury: 50,
+        deck,
+        players,
+        turnIndex: 0,
+        phase: 'TURN_DECISION',
+        pendingAction: null,
+        lossQueue: [],
+        exchangeData: null,
+        proofReveal: null,
+        logs: [{
+          text: `🎴 Game started with ${players.length} players! Every player starts with 0 Coins and 2 cards dealt from the top of the 15-card Court Deck.`,
+          type: 'win'
+        }]
+      };
+
+      showActiveGameUI();
+
+      if (gameMode === 'local') {
+        setupLocalPerspectiveBar();
+      }
+
+      syncStateToAll();
+    }
+
+    function setupLocalPerspectiveBar() {
+      const bar = document.getElementById('localPerspectiveBar');
+      const select = document.getElementById('perspectiveSelect');
+      bar.style.display = 'flex';
+      select.innerHTML = '';
+      gameState.players.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      });
+      myPlayerId = gameState.players[0].id;
+    }
+
+    function switchLocalPerspective(playerId) {
+      myPlayerId = playerId;
+      renderGameScreen();
+    }
+
+    function addLog(text, type = '') {
+      gameState.logs.unshift({ text, type });
+      if (gameState.logs.length > 80) gameState.logs.pop();
+    }
+
+    function getPlayer(id) {
+      return gameState.players.find(p => p.id === id);
+    }
+
+    function getActivePlayer() {
+      return gameState.players[gameState.turnIndex];
+    }
+
+    function advanceToNextTurn() {
+      const alivePlayers = gameState.players.filter(p => p.alive);
+      if (alivePlayers.length <= 1) {
+        gameState.phase = 'GAME_OVER';
+        const winner = alivePlayers[0];
+        if (winner) {
+          addLog(`🏆 VICTORY! ${winner.name} is the last player standing!`, 'win');
+        }
+        syncStateToAll();
+        return;
+      }
+
+      let nextIdx = (gameState.turnIndex + 1) % gameState.players.length;
+      while (!gameState.players[nextIdx].alive) {
+        nextIdx = (nextIdx + 1) % gameState.players.length;
+      }
+
+      gameState.turnIndex = nextIdx;
+      gameState.phase = 'TURN_DECISION';
+      gameState.pendingAction = null;
+      gameState.exchangeData = null;
+
+      if (gameMode === 'local') {
+        myPlayerId = gameState.players[nextIdx].id;
+        document.getElementById('perspectiveSelect').value = myPlayerId;
+      }
+
+      syncStateToAll();
+    }
+
+    /*************************************************************************
+     * 4. AUTHORITATIVE GAME ENGINE (BLUFFS, FIFO DECK, QUIET CARD LOSS)
+     *************************************************************************/
+    function processPlayerCommand(senderId, cmd) {
+      const actor = getActivePlayer();
+
+      if (cmd.action === 'DISMISS_PROOF') {
+        gameState.proofReveal = null;
+        syncStateToAll();
+        return;
+      }
+
+      // 1. DECLARE TURN ACTION
+      if (cmd.action === 'DECLARE_ACTION' && gameState.phase === 'TURN_DECISION') {
+        if (senderId !== actor.id && gameMode !== 'local') return;
+
+        // Clear any old proof banner on new turn action
+        gameState.proofReveal = null;
+
+        const { moveType, targetId } = cmd;
+        const target = targetId ? getPlayer(targetId) : null;
+
+        if (actor.coins >= 10 && moveType !== 'COUP') return;
+
+        if (moveType === 'INCOME') {
+          actor.coins += 1;
+          gameState.treasury = Math.max(0, gameState.treasury - 1);
+          addLog(`🪙 ${actor.name} takes Income (+1 Coin).`);
+          advanceToNextTurn();
+          return;
+        }
+
+        if (moveType === 'COUP') {
+          if (actor.coins < 7 || !target || !target.alive) return;
+          actor.coins -= 7;
+          gameState.treasury += 7;
+          addLog(`💥 ${actor.name} launches a COUP (-7 Coins) against ${target.name}!`, 'challenge');
+          queueQuietCardLoss(target.id, `Couped by ${actor.name}`, 'NEXT_TURN');
+          return;
+        }
+
+        if (moveType === 'FOREIGN_AID') {
+          addLog(`💰 ${actor.name} attempts Foreign Aid (+2 Coins). Any Duke may block.`, 'claim');
+          gameState.phase = 'AWAITING_BLOCK_ONLY';
+          gameState.pendingAction = {
+            type: 'FOREIGN_AID',
+            actorId: actor.id,
+            targetId: null,
+            claimedRole: null,
+            costPaid: 0,
+            passedIds: [actor.id],
+            blockerId: null,
+            blockerRole: null
+          };
+          syncStateToAll();
+          return;
+        }
+
+        if (moveType === 'TAX') {
+          addLog(`🟣 ${actor.name} claims DUKE to take Tax (+3 Coins).`, 'claim');
+          gameState.phase = 'AWAITING_ACTION_RESPONSE';
+          gameState.pendingAction = {
+            type: 'TAX',
+            actorId: actor.id,
+            targetId: null,
+            claimedRole: 'Duke',
+            costPaid: 0,
+            passedIds: [actor.id],
+            blockerId: null,
+            blockerRole: null
+          };
+          syncStateToAll();
+          return;
+        }
+
+        if (moveType === 'ASSASSINATE') {
+          if (actor.coins < 3 || !target || !target.alive) return;
+          actor.coins -= 3;
+          gameState.treasury += 3;
+          addLog(`🔴 ${actor.name} pays 3 Coins and claims ASSASSIN targeting ${target.name}!`, 'claim');
+          gameState.phase = 'AWAITING_ACTION_RESPONSE';
+          gameState.pendingAction = {
+            type: 'ASSASSINATE',
+            actorId: actor.id,
+            targetId: target.id,
+            claimedRole: 'Assassin',
+            costPaid: 3,
+            passedIds: [actor.id],
+            blockerId: null,
+            blockerRole: null
+          };
+          syncStateToAll();
+          return;
+        }
+
+        if (moveType === 'STEAL') {
+          if (!target || !target.alive) return;
+          addLog(`🔵 ${actor.name} claims CAPTAIN to steal up to 2 Coins from ${target.name}!`, 'claim');
+          gameState.phase = 'AWAITING_ACTION_RESPONSE';
+          gameState.pendingAction = {
+            type: 'STEAL',
+            actorId: actor.id,
+            targetId: target.id,
+            claimedRole: 'Captain',
+            costPaid: 0,
+            passedIds: [actor.id],
+            blockerId: null,
+            blockerRole: null
+          };
+          syncStateToAll();
+          return;
+        }
+
+        if (moveType === 'EXCHANGE') {
+          addLog(`🟢 ${actor.name} claims AMBASSADOR to exchange 2 cards with the Court Deck.`, 'claim');
+          gameState.phase = 'AWAITING_ACTION_RESPONSE';
+          gameState.pendingAction = {
+            type: 'EXCHANGE',
+            actorId: actor.id,
+            targetId: null,
+            claimedRole: 'Ambassador',
+            costPaid: 0,
+            passedIds: [actor.id],
+            blockerId: null,
+            blockerRole: null
+          };
+          syncStateToAll();
+          return;
+        }
+      }
+
+      // 2. PASS / ALLOW
+      if (cmd.action === 'PASS_RESPONSE') {
+        const pa = gameState.pendingAction;
+        if (!pa) return;
+        const passerId = cmd.actingPlayerId || senderId;
+        if (!pa.passedIds.includes(passerId)) {
+          pa.passedIds.push(passerId);
+        }
+
+        const aliveCount = gameState.players.filter(p => p.alive).length;
+        if (pa.passedIds.length >= aliveCount || cmd.forceResolve) {
+          if (gameState.phase === 'AWAITING_ACTION_RESPONSE' || gameState.phase === 'AWAITING_BLOCK_ONLY') {
+            executeUnblockedAction();
+          } else if (gameState.phase === 'AWAITING_BLOCK_RESPONSE') {
+            addLog(`🛡️ Block by ${getPlayer(pa.blockerId).name} (${pa.blockerRole}) stands! Action prevented.`, 'block');
+            advanceToNextTurn();
+          }
+        } else {
+          syncStateToAll();
+        }
+        return;
+      }
+
+      // 3. CHALLENGE AN ACTION CLAIM
+      if (cmd.action === 'CHALLENGE_ACTION' && gameState.phase === 'AWAITING_ACTION_RESPONSE') {
+        const pa = gameState.pendingAction;
+        const challenger = getPlayer(cmd.actingPlayerId || senderId);
+        const claimer = getPlayer(pa.actorId);
+        if (!challenger || !claimer || challenger.id === claimer.id) return;
+
+        addLog(`⚡ ${challenger.name} challenges ${claimer.name}'s claim of ${pa.claimedRole}!`, 'challenge');
+
+        const matchingCardIndex = claimer.cards.findIndex(c => !c.lost && c.role === pa.claimedRole);
+
+        if (matchingCardIndex !== -1) {
+          // NO BLUFF! The card IS right:
+          // 1) Show the card to all players on the table
+          // 2) Put the shown card into the BOTTOM of the Court Deck
+          // 3) Draw a new replacement card from the TOP of the Court Deck
+          const provenRole = claimer.cards[matchingCardIndex].role;
+          putCardInBottom(provenRole);
+          claimer.cards[matchingCardIndex].role = drawCardFromTop();
+
+          gameState.proofReveal = {
+            playerName: claimer.name,
+            role: provenRole,
+            detail: `${claimer.name} showed [${provenRole}] (No Bluff!), placed it at the BOTTOM of the Court Deck, and drew a new card from the TOP.`
+          };
+
+          addLog(`✅ NO BLUFF! ${claimer.name} shows [${provenRole}] to the table, puts it at the bottom of the deck, and draws a new card from the top! ${challenger.name} must quietly return 1 card to the deck.`, 'win');
+          queueQuietCardLoss(challenger.id, `Lost challenge against ${claimer.name}'s ${provenRole}`, 'RESOLVE_ACTION');
+        } else {
+          // BLUFF CAUGHT!
+          // Card is NOT shown to others; claimer quietly puts 1 of their cards into the bottom of the deck!
+          if (pa.type === 'ASSASSINATE' && pa.costPaid > 0) {
+            claimer.coins += pa.costPaid;
+            gameState.treasury = Math.max(0, gameState.treasury - pa.costPaid);
+            addLog(`❌ BLUFF! ${claimer.name} does not have ${pa.claimedRole} (3 Coins refunded). ${claimer.name} must quietly put 1 card into the bottom of the deck.`, 'challenge');
+          } else {
+            addLog(`❌ BLUFF! ${claimer.name} does not have ${pa.claimedRole}. ${claimer.name} must quietly put 1 card into the bottom of the deck.`, 'challenge');
+          }
+          queueQuietCardLoss(claimer.id, `Caught bluffing ${pa.claimedRole}`, 'NEXT_TURN');
+        }
+        return;
+      }
+
+      // 4. DECLARE A BLOCK
+      if (cmd.action === 'DECLARE_BLOCK' && (gameState.phase === 'AWAITING_ACTION_RESPONSE' || gameState.phase === 'AWAITING_BLOCK_ONLY')) {
+        const pa = gameState.pendingAction;
+        const blocker = getPlayer(cmd.actingPlayerId || senderId);
+        const blockRole = cmd.blockRole;
+        if (!blocker || !blocker.alive || blocker.id === pa.actorId) return;
+
+        if ((pa.type === 'ASSASSINATE' || pa.type === 'STEAL') && blocker.id !== pa.targetId) return;
+
+        pa.blockerId = blocker.id;
+        pa.blockerRole = blockRole;
+        pa.passedIds = [blocker.id];
+        gameState.phase = 'AWAITING_BLOCK_RESPONSE';
+
+        addLog(`🛡️ ${blocker.name} claims ${blockRole.toUpperCase()} to block ${getPlayer(pa.actorId).name}'s ${pa.type}!`, 'block');
+        syncStateToAll();
+        return;
+      }
+
+      // 5. CHALLENGE A BLOCK
+      if (cmd.action === 'CHALLENGE_BLOCK' && gameState.phase === 'AWAITING_BLOCK_RESPONSE') {
+        const pa = gameState.pendingAction;
+        const challenger = getPlayer(cmd.actingPlayerId || senderId);
+        const blocker = getPlayer(pa.blockerId);
+        if (!challenger || !blocker || challenger.id === blocker.id) return;
+
+        addLog(`⚡ ${challenger.name} challenges ${blocker.name}'s ${pa.blockerRole} block!`, 'challenge');
+
+        const matchingCardIndex = blocker.cards.findIndex(c => !c.lost && c.role === pa.blockerRole);
+
+        if (matchingCardIndex !== -1) {
+          // NO BLUFF on Block! Show card to table, put at BOTTOM of deck, draw new from TOP of deck
+          const provenRole = blocker.cards[matchingCardIndex].role;
+          putCardInBottom(provenRole);
+          blocker.cards[matchingCardIndex].role = drawCardFromTop();
+
+          gameState.proofReveal = {
+            playerName: blocker.name,
+            role: provenRole,
+            detail: `${blocker.name} showed [${provenRole}] (No Bluff!), placed it at the BOTTOM of the Court Deck, and drew a new card from the TOP.`
+          };
+
+          addLog(`✅ NO BLUFF! ${blocker.name} shows [${provenRole}] to the table, puts it at the bottom of the deck, and draws a new card from the top! Block succeeds & ${challenger.name} loses 1 card.`, 'win');
+          queueQuietCardLoss(challenger.id, `Lost challenge against ${blocker.name}'s ${provenRole} block`, 'NEXT_TURN');
+        } else {
+          // BLUFF on Block! Blocker quietly puts 1 card into the bottom of the deck, and action proceeds!
+          addLog(`❌ BLOCK BLUFF! ${blocker.name} does not have ${pa.blockerRole}. ${blocker.name} must quietly put 1 card into the bottom of the deck, and the ${pa.type} goes through!`, 'challenge');
+          queueQuietCardLoss(blocker.id, `Caught bluffing ${pa.blockerRole} block`, 'RESOLVE_ACTION');
+        }
+        return;
+      }
+
+      // 6. QUIETLY RETURN LOST CARD TO BOTTOM OF DECK (NOT SHOWN TO OTHERS)
+      if (cmd.action === 'LOSE_CARD' && gameState.phase === 'AWAITING_LOSS') {
+        const currentLoss = gameState.lossQueue[0];
+        if (!currentLoss) return;
+        const loser = getPlayer(currentLoss.playerId);
+        const card = loser.cards[cmd.cardIndex];
+        if (!card || card.lost) return;
+
+        // Quietly place the lost card into the BOTTOM of the Court Deck without showing it to other players
+        putCardInBottom(card.role);
+        card.lost = true;
+        card.role = 'Hidden';
+
+        addLog(`📥 ${loser.name} quietly puts 1 card into the bottom of the Court Deck (${currentLoss.reason}).`, 'challenge');
+
+        const stillAlive = loser.cards.some(c => !c.lost);
+        if (!stillAlive) {
+          loser.alive = false;
+          gameState.treasury += loser.coins;
+          loser.coins = 0;
+          addLog(`⚰️ ${loser.name} has 0 cards remaining and is out of the game!`, 'challenge');
+        }
+
+        gameState.lossQueue.shift();
+
+        if (gameState.lossQueue.length > 0) {
+          syncStateToAll();
+        } else if (currentLoss.nextCallbackType === 'RESOLVE_ACTION') {
+          executeUnblockedAction();
+        } else {
+          advanceToNextTurn();
+        }
+        return;
+      }
+
+      // 7. AMBASSADOR EXCHANGE COMPLETION (RETURN UNCHOSEN TO BOTTOM OF DECK)
+      if (cmd.action === 'COMPLETE_EXCHANGE' && gameState.phase === 'AWAITING_EXCHANGE') {
+        const ex = gameState.exchangeData;
+        if (!ex || (senderId !== ex.playerId && gameMode !== 'local')) return;
+
+        const chosenIndices = cmd.chosenIndices || [];
+        if (chosenIndices.length !== ex.keepCount) return;
+
+        const player = getPlayer(ex.playerId);
+        const keptRoles = chosenIndices.map(idx => ex.options[idx]);
+        const returnedRoles = ex.options.filter((_, idx) => !chosenIndices.includes(idx));
+
+        let kIdx = 0;
+        player.cards.forEach(c => {
+          if (!c.lost) {
+            c.role = keptRoles[kIdx++];
+          }
+        });
+
+        // Quietly place returned cards into the BOTTOM of the Court Deck
+        returnedRoles.forEach(r => putCardInBottom(r));
+
+        addLog(`🟢 ${player.name} kept ${ex.keepCount} card(s) and quietly put ${returnedRoles.length} card(s) into the bottom of the Court Deck.`);
+        advanceToNextTurn();
+      }
+    }
+
+    // Queues a player to quietly return 1 card to the bottom of the deck
+    function queueQuietCardLoss(playerId, reason, nextCallbackType) {
+      const player = getPlayer(playerId);
+      if (!player || !player.alive) {
+        if (nextCallbackType === 'RESOLVE_ACTION') executeUnblockedAction();
+        else advanceToNextTurn();
+        return;
+      }
+
+      const activeIndices = [];
+      player.cards.forEach((c, idx) => {
+        if (!c.lost) activeIndices.push(idx);
+      });
+
+      // If player only has 1 card left, quietly put it into the bottom of the deck automatically
+      if (activeIndices.length === 1) {
+        const idx = activeIndices[0];
+        putCardInBottom(player.cards[idx].role);
+        player.cards[idx].lost = true;
+        player.cards[idx].role = 'Hidden';
+        player.alive = false;
+        gameState.treasury += player.coins;
+        player.coins = 0;
+        addLog(`📥 ${player.name} quietly puts their last card into the bottom of the Court Deck (${reason}) and is eliminated!`, 'challenge');
+
+        if (nextCallbackType === 'RESOLVE_ACTION') executeUnblockedAction();
+        else advanceToNextTurn();
+        return;
+      }
+
+      gameState.phase = 'AWAITING_LOSS';
+      gameState.lossQueue.push({ playerId, reason, nextCallbackType });
+      if (gameMode === 'local') {
+        myPlayerId = playerId;
+        document.getElementById('perspectiveSelect').value = myPlayerId;
+      }
+      syncStateToAll();
+    }
+
+    function executeUnblockedAction() {
+      const pa = gameState.pendingAction;
+      if (!pa) return advanceToNextTurn();
+
+      const actor = getPlayer(pa.actorId);
+      const target = pa.targetId ? getPlayer(pa.targetId) : null;
+
+      if (pa.type === 'FOREIGN_AID') {
+        actor.coins += 2;
+        gameState.treasury = Math.max(0, gameState.treasury - 2);
+        addLog(`💰 ${actor.name} takes Foreign Aid (+2 Coins).`);
+        advanceToNextTurn();
+      } else if (pa.type === 'TAX') {
+        actor.coins += 3;
+        gameState.treasury = Math.max(0, gameState.treasury - 3);
+        addLog(`🟣 ${actor.name} collects Duke's Tax (+3 Coins).`);
+        advanceToNextTurn();
+      } else if (pa.type === 'STEAL') {
+        if (target && target.alive) {
+          const stolen = Math.min(2, target.coins);
+          target.coins -= stolen;
+          actor.coins += stolen;
+          addLog(`🔵 ${actor.name} steals ${stolen} Coin(s) from ${target.name}!`);
+        }
+        advanceToNextTurn();
+      } else if (pa.type === 'ASSASSINATE') {
+        if (target && target.alive) {
+          addLog(`🗡️ ${actor.name}'s Assassination hits ${target.name}!`, 'challenge');
+          queueQuietCardLoss(target.id, `Assassinated by ${actor.name}`, 'NEXT_TURN');
+        } else {
+          advanceToNextTurn();
+        }
+      } else if (pa.type === 'EXCHANGE') {
+        const liveRoles = actor.cards.filter(c => !c.lost).map(c => c.role);
+        // Draw 2 cards from the TOP of the Court Deck
+        const drawn = [drawCardFromTop(), drawCardFromTop()].filter(Boolean);
+        gameState.phase = 'AWAITING_EXCHANGE';
+        gameState.exchangeData = {
+          playerId: actor.id,
+          options: [...liveRoles, ...drawn],
+          keepCount: liveRoles.length
+        };
+        if (gameMode === 'local') {
+          myPlayerId = actor.id;
+          document.getElementById('perspectiveSelect').value = myPlayerId;
+        }
+        syncStateToAll();
+      }
+    }
+
+    /*************************************************************************
+     * 5. UI RENDERING
+     *************************************************************************/
+    let pendingMoveWaitingTarget = null;
+    let selectedExchangeIndices = [];
+
+    function renderGameScreen() {
+      document.getElementById('treasuryCoinsText').textContent = gameState.treasury;
+      document.getElementById('courtDeckCountText').textContent = gameState.deck.length;
+
+      const activePlayer = getActivePlayer();
+      const me = getPlayer(myPlayerId) || gameState.players[0];
+
+      document.getElementById('turnStatusHeader').textContent =
+        gameState.phase === 'GAME_OVER'
+          ? '🏆 Game Over'
+          : `${activePlayer.name}'s Turn`;
+
+      renderProofBanner();
+      renderPhaseBanner(me);
+      renderSeatsGrid(me);
+      renderCommandDeck(me, activePlayer);
+      renderLogs();
+
+      if (gameState.phase === 'AWAITING_EXCHANGE' && gameState.exchangeData && gameState.exchangeData.playerId === me.id) {
+        openAmbassadorModal();
+      } else {
+        closeModal('exchangeModal');
+      }
+    }
+
+    function renderProofBanner() {
+      const banner = document.getElementById('proofBanner');
+      if (!gameState.proofReveal) {
+        banner.style.display = 'none';
+        return;
+      }
+      const pr = gameState.proofReveal;
+      banner.style.display = 'flex';
+      const img = document.getElementById('proofCardImg');
+      img.src = getCardImageSrc(pr.role);
+      img.onerror = function() { handleImageFallback(this, pr.role); };
+      document.getElementById('proofBannerTitle').textContent = `✅ NO BLUFF! ${pr.playerName} Revealed ${pr.role.toUpperCase()}!`;
+      document.getElementById('proofBannerSub').textContent = pr.detail;
+    }
+
+    function dismissProofBanner() {
+      sendCommand({ action: 'DISMISS_PROOF' });
+    }
+
+    function renderPhaseBanner(me) {
+      const banner = document.getElementById('phaseBanner');
+      const title = document.getElementById('phaseBannerTitle');
+      const sub = document.getElementById('phaseBannerSub');
+      const btns = document.getElementById('phaseBannerButtons');
+      btns.innerHTML = '';
+
+      const pa = gameState.pendingAction;
+
+      if (gameState.phase === 'AWAITING_ACTION_RESPONSE' && pa) {
+        banner.style.display = 'flex';
+        const actor = getPlayer(pa.actorId);
+        const target = pa.targetId ? getPlayer(pa.targetId) : null;
+        title.textContent = `🚨 ${actor.name} claims [${pa.claimedRole}] for ${pa.type}${target ? ' on ' + target.name : ''}!`;
+        sub.textContent = `Players at the table may Challenge Bluff, Block, or Allow (${pa.passedIds.length}/${gameState.players.filter(p => p.alive).length} allowed)`;
+
+        if (me.alive && me.id !== actor.id) {
+          const chalBtn = document.createElement('button');
+          chalBtn.className = 'btn btn-crimson';
+          chalBtn.textContent = `🔥 Call Bluff (Challenge ${pa.claimedRole})`;
+          chalBtn.onclick = () => sendCommand({ action: 'CHALLENGE_ACTION', actingPlayerId: me.id });
+          btns.appendChild(chalBtn);
+
+          if (pa.type === 'ASSASSINATE' && me.id === pa.targetId) {
+            const bBtn = document.createElement('button');
+            bBtn.className = 'btn btn-gold';
+            bBtn.textContent = `🛡️ Block with Contessa`;
+            bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: 'Contessa', actingPlayerId: me.id });
+            btns.appendChild(bBtn);
+          }
+
+          if (pa.type === 'STEAL' && me.id === pa.targetId) {
+            ['Captain', 'Ambassador'].forEach(r => {
+              const bBtn = document.createElement('button');
+              bBtn.className = 'btn btn-gold';
+              bBtn.textContent = `🛡️ Block with ${r}`;
+              bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: r, actingPlayerId: me.id });
+              btns.appendChild(bBtn);
+            });
+          }
+
+          const alreadyPassed = pa.passedIds.includes(me.id);
+          const passBtn = document.createElement('button');
+          passBtn.className = 'btn btn-emerald';
+          passBtn.disabled = alreadyPassed;
+          passBtn.textContent = alreadyPassed ? '✓ Allowed' : '👍 Allow / Pass';
+          passBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', actingPlayerId: me.id });
+          btns.appendChild(passBtn);
+        }
+
+        if (isHost || gameMode === 'local') {
+          const forceBtn = document.createElement('button');
+          forceBtn.className = 'btn';
+          forceBtn.textContent = '⏩ Table Agreed (Resolve Now)';
+          forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
+          btns.appendChild(forceBtn);
+        }
+        return;
+      }
+
+      if (gameState.phase === 'AWAITING_BLOCK_ONLY' && pa) {
+        banner.style.display = 'flex';
+        const actor = getPlayer(pa.actorId);
+        title.textContent = `💰 ${actor.name} is taking Foreign Aid (+2 Coins).`;
+        sub.textContent = `Anyone may claim DUKE to block, or Allow.`;
+
+        if (me.alive && me.id !== actor.id) {
+          const bBtn = document.createElement('button');
+          bBtn.className = 'btn btn-gold';
+          bBtn.textContent = `🟣 Claim Duke to Block`;
+          bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: 'Duke', actingPlayerId: me.id });
+          btns.appendChild(bBtn);
+
+          const alreadyPassed = pa.passedIds.includes(me.id);
+          const passBtn = document.createElement('button');
+          passBtn.className = 'btn btn-emerald';
+          passBtn.disabled = alreadyPassed;
+          passBtn.textContent = alreadyPassed ? '✓ Allowed' : '👍 Allow';
+          passBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', actingPlayerId: me.id });
+          btns.appendChild(passBtn);
+        }
+
+        if (isHost || gameMode === 'local') {
+          const forceBtn = document.createElement('button');
+          forceBtn.className = 'btn';
+          forceBtn.textContent = '⏩ Table Agreed (Resolve Now)';
+          forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
+          btns.appendChild(forceBtn);
+        }
+        return;
+      }
+
+      if (gameState.phase === 'AWAITING_BLOCK_RESPONSE' && pa) {
+        banner.style.display = 'flex';
+        const blocker = getPlayer(pa.blockerId);
+        title.textContent = `🛡️ ${blocker.name} claims [${pa.blockerRole}] to BLOCK!`;
+        sub.textContent = `Challenge ${blocker.name}'s ${pa.blockerRole} or Accept the Block.`;
+
+        if (me.alive && me.id !== blocker.id) {
+          const chalBtn = document.createElement('button');
+          chalBtn.className = 'btn btn-crimson';
+          chalBtn.textContent = `🔥 Call Bluff (Challenge ${pa.blockerRole})`;
+          chalBtn.onclick = () => sendCommand({ action: 'CHALLENGE_BLOCK', actingPlayerId: me.id });
+          btns.appendChild(chalBtn);
+
+          const alreadyPassed = pa.passedIds.includes(me.id);
+          const passBtn = document.createElement('button');
+          passBtn.className = 'btn btn-emerald';
+          passBtn.disabled = alreadyPassed;
+          passBtn.textContent = alreadyPassed ? '✓ Accepted' : '👍 Accept Block';
+          passBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', actingPlayerId: me.id });
+          btns.appendChild(passBtn);
+        }
+
+        if (isHost || gameMode === 'local') {
+          const forceBtn = document.createElement('button');
+          forceBtn.className = 'btn';
+          forceBtn.textContent = '⏩ Accept Block Now';
+          forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
+          btns.appendChild(forceBtn);
+        }
+        return;
+      }
+
+      if (gameState.phase === 'AWAITING_LOSS' && gameState.lossQueue.length > 0) {
+        banner.style.display = 'flex';
+        const currentLoss = gameState.lossQueue[0];
+        const loser = getPlayer(currentLoss.playerId);
+        title.textContent = `📥 ${loser.name} must quietly put 1 card into the bottom of the Court Deck!`;
+        sub.textContent = loser.id === me.id
+          ? `Tap one of your cards below to quietly return it to the bottom of the deck (others will NOT see what card you put back).`
+          : `Waiting for ${loser.name} to quietly return 1 card to the bottom of the deck...`;
+        return;
+      }
+
+      if (gameState.phase === 'GAME_OVER') {
+        banner.style.display = 'flex';
+        const winner = gameState.players.find(p => p.alive);
+        title.textContent = `👑 ${winner ? winner.name : 'Player'} Wins the Game!`;
+        sub.textContent = `All other players have returned their cards to the deck.`;
+        if (isHost || gameMode === 'local') {
+          const againBtn = document.createElement('button');
+          againBtn.className = 'btn btn-gold';
+          againBtn.textContent = '🔄 Deal New Game (0 Coins)';
+          againBtn.onclick = () => startGame();
+          btns.appendChild(againBtn);
+        }
+        return;
+      }
+
+      banner.style.display = 'none';
+    }
+
+    function renderSeatsGrid(me) {
+      const grid = document.getElementById('seatsGrid');
+      grid.innerHTML = '';
+
+      const currentLoss = gameState.phase === 'AWAITING_LOSS' ? gameState.lossQueue[0] : null;
+
+      // Sort so "YOU" appear first on your own phone screen for easy tabletop viewing
+      const orderedPlayers = [...gameState.players].sort((a, b) => (a.id === me.id ? -1 : b.id === me.id ? 1 : 0));
+
+      orderedPlayers.forEach(p => {
+        const realIdx = gameState.players.findIndex(x => x.id === p.id);
+        const isTurn = realIdx === gameState.turnIndex && gameState.phase !== 'GAME_OVER';
+        const isMe = p.id === me.id;
+        const pod = document.createElement('div');
+        pod.className = `player-pod ${isTurn ? 'active-turn' : ''} ${isMe ? 'is-me' : ''} ${!p.alive ? 'eliminated' : ''}`;
+
+        let cardsHtml = '';
+        p.cards.forEach((card, cIdx) => {
+          if (card.lost) {
+            // Card was quietly returned to bottom of deck (never shown to anyone)
+            cardsHtml += `
+              <div class="influence-card returned-slot">
+                <div style="font-size:1.4rem; opacity:0.5; margin-bottom:0.25rem;">📥</div>
+                <div style="font-size:0.75rem; font-weight:700; color:#9ca3af;">LOST CARD</div>
+                <div style="font-size:0.65rem; color:#6b7280; margin-top:0.15rem;">Quietly returned to bottom of deck</div>
+              </div>
+            `;
+            return;
+          }
+
+          const mustPickToLose = currentLoss && currentLoss.playerId === p.id && isMe && !card.lost;
+          const canSeeRole = isMe && (!hideMyCards || mustPickToLose);
+          const displayRole = canSeeRole && card.role !== 'Hidden' ? card.role : 'Hidden';
+          const roleMeta = ROLES[displayRole];
+
+          cardsHtml += `
+            <div class="influence-card ${mustPickToLose ? 'selectable' : ''}"
+                 onclick="${mustPickToLose ? `selectCardToLose(${cIdx})` : ''}">
+              <img class="card-art" src="${getCardImageSrc(displayRole)}" alt="${displayRole}" onerror="handleImageFallback(this, '${displayRole}')" />
+              <div class="card-label-bar">
+                <div class="card-role-name" style="color:${roleMeta ? roleMeta.color : '#cbd5e1'};">
+                  ${displayRole === 'Hidden' ? (isMe && hideMyCards ? 'HIDDEN (TAP PEEK)' : 'FACE-DOWN CARD') : displayRole.toUpperCase()}
+                </div>
+                <div class="card-role-sub">
+                  ${mustPickToLose ? '⬇️ Tap to Put in Deck Bottom' : (isMe ? 'Your Secret Card' : 'Active Influence')}
+                </div>
+              </div>
+            </div>
+          `;
+        });
+
+        pod.innerHTML = `
+          <div class="pod-header">
+            <div class="player-name">
+              <span>${escapeHtml(p.name)}</span>
+              ${isMe ? '<span class="badge badge-you">YOU</span>' : ''}
+              ${isTurn ? '<span class="badge badge-turn">TURN</span>' : ''}
+            </div>
+            <div class="player-coins">
+              <span>🪙</span>
+              <span>${p.coins}</span>
+            </div>
+          </div>
+          <div class="cards-row">${cardsHtml}</div>
+        `;
+        grid.appendChild(pod);
+      });
+    }
+
+    function selectCardToLose(cardIndex) {
+      sendCommand({ action: 'LOSE_CARD', cardIndex });
+    }
+
+    function renderCommandDeck(me, activePlayer) {
+      const isMyTurn = me.id === activePlayer.id && gameState.phase === 'TURN_DECISION' && me.alive;
+      const mustCoup = me.coins >= 10;
+      document.getElementById('mandatoryCoupWarning').style.display = (isMyTurn && mustCoup) ? 'inline' : 'none';
+
+      const myLiveRoles = me.cards.filter(c => !c.lost).map(c => c.role);
+
+      const generalActions = [
+        {
+          id: 'INCOME',
+          title: '🪙 Income (+1 Coin)',
+          desc: 'Take 1 coin from Treasury. Cannot be blocked.',
+          disabled: !isMyTurn || mustCoup,
+          needsTarget: false
+        },
+        {
+          id: 'FOREIGN_AID',
+          title: '💰 Foreign Aid (+2 Coins)',
+          desc: 'Take 2 coins. Blockable by Duke.',
+          disabled: !isMyTurn || mustCoup,
+          needsTarget: false
+        },
+        {
+          id: 'COUP',
+          title: '💥 Launch Coup (-7 Coins)',
+          desc: 'Target player quietly loses 1 card to deck.',
+          disabled: !isMyTurn || me.coins < 7,
+          needsTarget: true
+        }
+      ];
+
+      const charActions = [
+        {
+          id: 'TAX',
+          role: 'Duke',
+          title: '🟣 Duke — Tax (+3 Coins)',
+          desc: 'Take 3 coins from the Treasury.',
+          disabled: !isMyTurn || mustCoup,
+          needsTarget: false
+        },
+        {
+          id: 'ASSASSINATE',
+          role: 'Assassin',
+          title: '🔴 Assassin — Assassinate (-3)',
+          desc: 'Pay 3 coins. Target loses 1 card to deck.',
+          disabled: !isMyTurn || mustCoup || me.coins < 3,
+          needsTarget: true
+        },
+        {
+          id: 'STEAL',
+          role: 'Captain',
+          title: '🔵 Captain — Steal (+2 Coins)',
+          desc: 'Steal up to 2 coins from a target player.',
+          disabled: !isMyTurn || mustCoup,
+          needsTarget: true
+        },
+        {
+          id: 'EXCHANGE',
+          role: 'Ambassador',
+          title: '🟢 Ambassador — Exchange',
+          desc: 'Draw 2 from Deck Top, return 2 to Bottom.',
+          disabled: !isMyTurn || mustCoup,
+          needsTarget: false
+        }
+      ];
+
+      const genGrid = document.getElementById('generalActionsGrid');
+      genGrid.innerHTML = '';
+      generalActions.forEach(a => {
+        const btn = document.createElement('button');
+        btn.className = 'action-btn';
+        btn.disabled = a.disabled;
+        btn.onclick = () => triggerTurnMove(a.id, a.needsTarget);
+        btn.innerHTML = `
+          <div class="action-btn-header"><span>${a.title}</span></div>
+          <div class="action-btn-desc">${a.desc}</div>
+        `;
+        genGrid.appendChild(btn);
+      });
+
+      const charGrid = document.getElementById('characterActionsGrid');
+      charGrid.innerHTML = '';
+      charActions.forEach(a => {
+        const holdsCard = myLiveRoles.includes(a.role);
+        const btn = document.createElement('button');
+        btn.className = 'action-btn';
+        btn.disabled = a.disabled;
+        btn.onclick = () => triggerTurnMove(a.id, a.needsTarget);
+        btn.innerHTML = `
+          <div class="action-btn-header">
+            <span>${a.title}</span>
+            ${!hideMyCards ? `<span class="bluff-pill ${holdsCard ? 'pill-truth' : 'pill-bluff'}">${holdsCard ? '✓ Have' : '🎭 Bluff'}</span>` : ''}
+          </div>
+          <div class="action-btn-desc">${a.desc}</div>
+        `;
+        charGrid.appendChild(btn);
+      });
+    }
+
+    function triggerTurnMove(moveType, needsTarget) {
+      if (!needsTarget) {
+        sendCommand({ action: 'DECLARE_ACTION', moveType, targetId: null });
+        return;
+      }
+
+      pendingMoveWaitingTarget = moveType;
+      const list = document.getElementById('targetPlayersList');
+      list.innerHTML = '';
+      const activePlayer = getActivePlayer();
+
+      gameState.players.forEach(p => {
+        if (!p.alive || p.id === activePlayer.id) return;
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.style.width = '100%';
+        btn.style.justifyContent = 'space-between';
+        btn.style.padding = '0.75rem 1rem';
+        btn.innerHTML = `
+          <span><strong>${escapeHtml(p.name)}</strong> (${p.cards.filter(c => !c.lost).length} cards)</span>
+          <span>🪙 ${p.coins} Coins</span>
+        `;
+        btn.onclick = () => {
+          sendCommand({ action: 'DECLARE_ACTION', moveType: pendingMoveWaitingTarget, targetId: p.id });
+          closeModal('targetModal');
+        };
+        list.appendChild(btn);
+      });
+
+      openModal('targetModal');
+    }
+
+    function openAmbassadorModal() {
+      const ex = gameState.exchangeData;
+      if (!ex) return;
+
+      const instruction = document.getElementById('exchangeInstructionText');
+      const container = document.getElementById('exchangeCardsContainer');
+      const confirmBtn = document.getElementById('confirmExchangeBtn');
+
+      instruction.textContent = `Select exactly ${ex.keepCount} card(s) to keep. Unchosen card(s) will be quietly returned to the bottom of the Court Deck.`;
+      container.innerHTML = '';
+      selectedExchangeIndices = [];
+      confirmBtn.disabled = true;
+
+      ex.options.forEach((role, idx) => {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'influence-card selectable';
+        cardDiv.style.cursor = 'pointer';
+        cardDiv.style.borderWidth = '3px';
+        const roleMeta = ROLES[role] || ROLES.Hidden;
+
+        cardDiv.innerHTML = `
+          <img class="card-art" src="${getCardImageSrc(role)}" alt="${role}" onerror="handleImageFallback(this, '${role}')" />
+          <div class="card-label-bar">
+            <div class="card-role-name" style="color:${roleMeta.color};">${role.toUpperCase()}</div>
+            <div class="card-role-sub status-text">Tap to select</div>
+          </div>
+        `;
+
+        cardDiv.onclick = () => {
+          const pos = selectedExchangeIndices.indexOf(idx);
+          if (pos !== -1) {
+            selectedExchangeIndices.splice(pos, 1);
+            cardDiv.style.borderColor = 'rgba(255, 255, 255, 0.18)';
+            cardDiv.querySelector('.status-text').textContent = 'Tap to select';
+          } else {
+            if (selectedExchangeIndices.length >= ex.keepCount) {
+              const firstIdx = selectedExchangeIndices.shift();
+              const firstEl = container.children[firstIdx];
+              if (firstEl) {
+                firstEl.style.borderColor = 'rgba(255, 255, 255, 0.18)';
+                firstEl.querySelector('.status-text').textContent = 'Tap to select';
+              }
+            }
+            selectedExchangeIndices.push(idx);
+            cardDiv.style.borderColor = '#10b981';
+            cardDiv.querySelector('.status-text').textContent = '✓ KEEPING';
+          }
+          confirmBtn.disabled = selectedExchangeIndices.length !== ex.keepCount;
+        };
+
+        container.appendChild(cardDiv);
+      });
+
+      openModal('exchangeModal');
+    }
+
+    function submitAmbassadorExchange() {
+      const ex = gameState.exchangeData;
+      if (!ex || selectedExchangeIndices.length !== ex.keepCount) return;
+      sendCommand({ action: 'COMPLETE_EXCHANGE', chosenIndices: selectedExchangeIndices });
+      closeModal('exchangeModal');
+    }
+
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('open');
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.remove('open');
+    }
+
+    function renderLogs() {
+      const container = document.getElementById('gameLogContainer');
+      container.innerHTML = '';
+      gameState.logs.forEach(log => {
+        const el = document.createElement('div');
+        el.className = `log-entry ${log.type || ''}`;
+        el.textContent = log.text;
+        container.appendChild(el);
+      });
+    }
+
+    function resetToLobby() {
+      if (confirm('Are you sure you want to leave the table and return to the lobby?')) {
+        if (peer) {
+          try { peer.destroy(); } catch (e) {}
+          peer = null;
+        }
+        hostConnection = null;
+        clientConnections = {};
+        gameState.started = false;
+        document.getElementById('gameScreen').style.display = 'none';
+        document.getElementById('lobbyScreen').style.display = 'block';
+        document.getElementById('leaveBtn').style.display = 'none';
+        document.getElementById('peekToggleBtn').style.display = 'none';
+        document.getElementById('localPerspectiveBar').style.display = 'none';
+        document.getElementById('roomCodeDisplay').style.display = 'none';
+        document.getElementById('networkStatusText').textContent = '';
+        renderLobbySeats();
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Initialize lobby on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderLobbySeats();
+    });
+  </script>
+</body>
+</html>
