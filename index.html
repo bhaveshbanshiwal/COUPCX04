@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="icon" type="image/jpeg" href="images/box.jpg" />
   <title>COUP — Tabletop Digital Companion (2–6 Players)</title>
-  <!-- PeerJS for Serverless GitHub Pages WebRTC Multiplayer -->
+
   <!-- Paho MQTT over Secure WebSocket for Instant Cross-Device P2P Multiplayer (Zero-NAT issues) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
   <!-- PeerJS Fallback -->
@@ -823,7 +823,7 @@
             <div style="display:flex; gap:0.65rem; flex-wrap:wrap; margin-bottom:1.15rem;">
               <button class="btn btn-gold" onclick="hostOnlineRoom()">👑 Host Table</button>
               <div style="display:flex; gap:0.4rem; flex:1; min-width:210px;">
-                <input type="text" id="joinCodeInput" class="input-field" placeholder="4-Digit Code (e.g. 9524)"
+                <input type="text" id="joinCodeInput" class="input-field" placeholder="4-Digit Code (e.g. 1234)"
                   maxlength="4" inputmode="numeric" pattern="[0-9]*"
                   style="letter-spacing:0.18em; font-family:'JetBrains Mono', monospace; font-size:1.02rem; text-align:center; font-weight:700;" />
                 <button class="btn btn-emerald" onclick="joinOnlineRoom()">Join Table</button>
@@ -1094,7 +1094,7 @@
     </div>
   </div>
 
-  <!-- ================= GAME ENGINE & P2P SCRIPT ================= -->
+  <!-- ================= GAME ENGINE & NETWORKING SCRIPT ================= -->
   <script>
     /*************************************************************************
      * 1. ROLES & IMAGE FOLDER WIRING (/images/*.jpg with rounded corners)
@@ -1108,13 +1108,11 @@
       Hidden: { name: 'Hidden', color: '#cbd5e1', file: 'images/back.jpg' }
     };
 
-    // Primary path points directly to your /images folder
     function getCardImageSrc(role) {
       if (ROLES[role]) return ROLES[role].file;
       return 'images/back.jpg';
     }
 
-    // Automatic fallback if an image is named .png or not uploaded yet
     function handleImageFallback(imgEl, roleKey) {
       const currentSrc = imgEl.getAttribute('src') || '';
       if (currentSrc.endsWith('.jpg')) {
@@ -1139,17 +1137,14 @@
     }
 
     /*************************************************************************
-     * 2. STATE & SMOOTH PEER-TO-PEER NETWORKING
+     * 2. STATE & SMOOTH P2P NETWORKING (MQTT Zero-NAT Implementation)
      *************************************************************************/
     let gameMode = 'online'; // 'online' | 'local'
     let isHost = false;
     let myPlayerId = 'p_host';
     let hideMyCards = false; // Tabletop anti-peek toggle
-    let peer = null;
-    let hostConnection = null;
-    let clientConnections = {};
-    let lobbyPlayers = [];
 
+    let lobbyPlayers = [];
     let gameState = {
       started: false,
       treasury: 50,
@@ -1163,6 +1158,15 @@
       proofReveal: null, // Shown ONLY when a challenged player proves they have the card (No Bluff)
       logs: []
     };
+
+    // INSTANT REAL-TIME BROKER MESSAGING (ZERO-NAT / 4G / 5G / WI-FI)
+    const MQTT_BROKERS = [
+      { host: 'broker.hivemq.com', port: 8884, path: '/mqtt' },
+      { host: 'broker.emqx.io', port: 8084, path: '/mqtt' }
+    ];
+    let currentBrokerIndex = 0;
+    let mqttClient = null;
+    let currentRoomCode = '';
 
     function toggleCardPrivacy() {
       hideMyCards = !hideMyCards;
@@ -1234,19 +1238,8 @@
       renderLobbySeats();
     }
 
-    // MULTI-BROKER SECURE WEBSOCKET MESSAGING (ZERO-NAT / 4G / 5G / WI-FI)
-    const MQTT_BROKERS = [
-      { host: 'broker.hivemq.com', port: 8884, path: '/mqtt' },
-      { host: 'broker.emqx.io', port: 8084, path: '/mqtt' }
-    ];
-    let currentBrokerIndex = 0;
-    let mqttClient = null;
-    let currentRoomCode = '';
-    let joinRetryInterval = null;
-    let joinTimeoutTimer = null;
-
     function generateRoomCode() {
-      // Strictly 4-digit room code (e.g. 1234 to 9999)
+      // Strictly 4-digit code (e.g. 1234)
       return String(Math.floor(1000 + Math.random() * 9000));
     }
 
@@ -1257,46 +1250,45 @@
       }
 
       const broker = MQTT_BROKERS[currentBrokerIndex];
-      const clientId = 'coup_' + (isHost ? 'h_' : 'g_') + myPlayerId + '_' + Math.random().toString(36).substring(2, 6);
+      const clientId = 'coup_' + (isHost ? 'h_' : 'c_') + myPlayerId + '_' + Math.random().toString(36).substring(2, 6);
       const client = new Paho.MQTT.Client(broker.host, broker.port, broker.path, clientId);
-
-      let settled = false;
-      const connTimeout = setTimeout(() => {
-        if (!settled) {
-          settled = true;
-          console.warn('Broker timeout on', broker.host, 'trying alternate broker...');
-          currentBrokerIndex = (currentBrokerIndex + 1) % MQTT_BROKERS.length;
-          connectMqtt(onSuccess, onError);
-        }
-      }, 5000);
 
       client.onConnectionLost = (resp) => {
         if (resp.errorCode !== 0) {
           console.warn('MQTT Connection lost:', resp.errorMessage);
-          const statusEl = document.getElementById('networkStatusText');
-          if (statusEl) statusEl.textContent = '⚠️ Network reconnecting...';
+          document.getElementById('networkStatusText').textContent = '⚠️ Network reconnecting...';
           setTimeout(() => {
             if (currentRoomCode) connectMqtt(onSuccess, onError);
           }, 2000);
         }
       };
 
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          console.warn('Broker timeout on', broker.host, 'switching to secondary broker...');
+          currentBrokerIndex = (currentBrokerIndex + 1) % MQTT_BROKERS.length;
+          connectMqtt(onSuccess, onError);
+        }
+      }, 4000);
+
       client.connect({
         useSSL: true,
-        timeout: 5,
+        timeout: 4,
         keepAliveInterval: 30,
         cleanSession: true,
         onSuccess: () => {
           if (settled) return;
           settled = true;
-          clearTimeout(connTimeout);
+          clearTimeout(timeout);
           mqttClient = client;
-          onSuccess(client);
+          if (onSuccess) onSuccess(client);
         },
         onFailure: (err) => {
           if (settled) return;
           settled = true;
-          clearTimeout(connTimeout);
+          clearTimeout(timeout);
           console.warn('Broker failed on', broker.host, err);
           currentBrokerIndex = (currentBrokerIndex + 1) % MQTT_BROKERS.length;
           connectMqtt(onSuccess, onError);
@@ -1304,13 +1296,12 @@
       });
     }
 
-    function mqttPublish(topic, data, retained = false) {
+    function mqttPublish(topic, data) {
       if (!mqttClient || !mqttClient.isConnected()) return;
       try {
         const msg = new Paho.MQTT.Message(JSON.stringify(data));
         msg.destinationName = topic;
         msg.qos = 1;
-        msg.retained = retained;
         mqttClient.send(msg);
       } catch (e) {
         console.error('MQTT publish error:', e);
@@ -1319,53 +1310,42 @@
 
     function hostOnlineRoom() {
       const name = document.getElementById('playerNameInput').value.trim() || 'Host';
-      const inputCode = document.getElementById('joinCodeInput').value.trim();
-      const roomCode = (/^\d{4}$/.test(inputCode)) ? inputCode : generateRoomCode();
-
+      const roomCode = generateRoomCode();
       currentRoomCode = roomCode;
       isHost = true;
-      myPlayerId = 'h_' + Math.random().toString(36).substring(2, 8);
+      myPlayerId = 'p_host_' + Math.random().toString(36).substring(2, 8);
       lobbyPlayers = [{ id: myPlayerId, name }];
 
-      document.getElementById('networkStatusText').textContent = '📡 Opening Table ' + roomCode + '...';
+      document.getElementById('networkStatusText').textContent = '📡 Opening table on network...';
 
       connectMqtt(
         (client) => {
           document.getElementById('roomCodeDisplay').style.display = 'block';
           document.getElementById('roomCodeText').textContent = roomCode;
-          document.getElementById('joinCodeInput').value = roomCode;
-          document.getElementById('networkStatusText').textContent = '✅ Table Ready! Have friends enter 4-digit Table Code: ' + roomCode;
+          document.getElementById('networkStatusText').textContent = '✅ Table Ready! Have friends enter Table Code: ' + roomCode;
           renderLobbySeats();
+
+          // Subscribe to incoming requests & commands
+          client.subscribe(`coup_v2/${roomCode}/join`);
+          client.subscribe(`coup_v2/${roomCode}/commands`);
 
           client.onMessageArrived = (message) => {
             try {
               const data = JSON.parse(message.payloadString);
-              if (message.destinationName === 'coup_v2/' + roomCode + '/join') {
+              if (message.destinationName === `coup_v2/${roomCode}/join`) {
                 handleHostIncomingJoin(data);
-              } else if (message.destinationName === 'coup_v2/' + roomCode + '/commands') {
+              } else if (message.destinationName === `coup_v2/${roomCode}/commands`) {
                 if (data.senderId !== myPlayerId) {
                   processPlayerCommand(data.senderId, data.command);
                 }
               }
             } catch (e) {
-              console.error('Host message handling error:', e);
+              console.error('Host processing error', e);
             }
           };
-
-          client.subscribe('coup_v2/' + roomCode + '/join', {
-            qos: 1,
-            onSuccess: () => {
-              client.subscribe('coup_v2/' + roomCode + '/commands', {
-                qos: 1,
-                onSuccess: () => {
-                  broadcastLobbyState();
-                }
-              });
-            }
-          });
         },
         (err) => {
-          document.getElementById('networkStatusText').textContent = '❌ Failed to connect to server: ' + (err.errorMessage || err);
+          document.getElementById('networkStatusText').textContent = '❌ Failed to open table: ' + err;
         }
       );
     }
@@ -1373,7 +1353,7 @@
     function handleHostIncomingJoin(data) {
       if (data.type === 'JOIN_REQUEST') {
         if (gameState.started || lobbyPlayers.length >= 6) {
-          mqttPublish('coup_v2/' + currentRoomCode + '/reply/' + data.id, {
+          mqttPublish(`coup_v2/${currentRoomCode}/reply/${data.id}`, {
             type: 'JOIN_REJECTED',
             reason: 'Table is full or game already in progress.'
           });
@@ -1382,6 +1362,7 @@
 
         const playerName = (data.name || 'Player').slice(0, 18);
         const existing = lobbyPlayers.find(p => p.id === data.id);
+
         if (!existing) {
           lobbyPlayers.push({ id: data.id, name: playerName });
         } else {
@@ -1389,6 +1370,15 @@
         }
 
         renderLobbySeats();
+
+        // Direct confirmation back to the joining peer
+        mqttPublish(`coup_v2/${currentRoomCode}/reply/${data.id}`, {
+          type: 'JOIN_ACCEPTED',
+          lobbyPlayers,
+          roomCode: currentRoomCode
+        });
+
+        // Broadcast to all seated players
         broadcastLobbyState();
       }
     }
@@ -1397,83 +1387,70 @@
       const name = document.getElementById('playerNameInput').value.trim();
       if (!name) return alert('Please enter your name first!');
       const code = document.getElementById('joinCodeInput').value.trim();
-      if (!code || !/^\d{4}$/.test(code)) return alert('Please enter a valid 4-digit code (e.g. 9524)!');
-
-      if (joinRetryInterval) clearInterval(joinRetryInterval);
-      if (joinTimeoutTimer) clearTimeout(joinTimeoutTimer);
+      if (!code || !/^\d{4}$/.test(code)) return alert('Please enter a valid 4-digit code (e.g. 1234)!');
 
       currentRoomCode = code;
       isHost = false;
       myPlayerId = 'p_' + Math.random().toString(36).substring(2, 8);
 
-      document.getElementById('networkStatusText').textContent = '📡 Connecting to Table ' + code + '...';
+      document.getElementById('networkStatusText').textContent = `📡 Connecting to Table ${code}...`;
 
       connectMqtt(
         (client) => {
           let isSeated = false;
 
+          // Subscribe to lobby updates, individual game state, and direct replies
+          client.subscribe(`coup_v2/${code}/lobby`);
+          client.subscribe(`coup_v2/${code}/reply/${myPlayerId}`);
+          client.subscribe(`coup_v2/${code}/state/${myPlayerId}`);
+
           client.onMessageArrived = (message) => {
             try {
               const data = JSON.parse(message.payloadString);
-              if (data.type === 'LOBBY_UPDATE' || data.type === 'JOIN_ACCEPTED') {
+              if (data.type === 'JOIN_ACCEPTED' || data.type === 'LOBBY_UPDATE') {
+                isSeated = true;
                 lobbyPlayers = data.lobbyPlayers || lobbyPlayers;
-                const amISeated = lobbyPlayers.some(p => p.id === myPlayerId);
-                if (amISeated) {
-                  isSeated = true;
-                  if (joinRetryInterval) clearInterval(joinRetryInterval);
-                  if (joinTimeoutTimer) clearTimeout(joinTimeoutTimer);
-                  document.getElementById('roomCodeDisplay').style.display = 'block';
-                  document.getElementById('roomCodeText').textContent = code;
-                  document.getElementById('networkStatusText').textContent = '✅ Seated at Table ' + code + '! Waiting for Host to deal...';
-                  renderLobbySeats();
+                document.getElementById('roomCodeDisplay').style.display = 'block';
+                document.getElementById('roomCodeText').textContent = code;
+                if (!gameState.started) {
+                  document.getElementById('networkStatusText').textContent = `✅ Seated at Table ${code}! Waiting for Host to deal...`;
                 }
+                renderLobbySeats();
               } else if (data.type === 'GAME_STATE_SYNC') {
                 gameState = data.state;
                 showActiveGameUI();
                 renderGameScreen();
               } else if (data.type === 'JOIN_REJECTED') {
-                if (joinRetryInterval) clearInterval(joinRetryInterval);
-                if (joinTimeoutTimer) clearTimeout(joinTimeoutTimer);
                 alert(data.reason);
                 document.getElementById('networkStatusText').textContent = '❌ ' + data.reason;
               }
             } catch (e) {
-              console.error('Client message handling error:', e);
+              console.error('Error in client onMessageArrived:', e);
             }
           };
 
-          client.subscribe('coup_v2/' + code + '/lobby', {
-            qos: 1,
-            onSuccess: () => {
-              client.subscribe('coup_v2/' + code + '/state/' + myPlayerId, {
-                qos: 1,
-                onSuccess: () => {
-                  document.getElementById('networkStatusText').textContent = '🤝 Seating at Table ' + code + '...';
-
-                  const sendJoin = () => {
-                    if (!isSeated) {
-                      mqttPublish('coup_v2/' + code + '/join', {
-                        type: 'JOIN_REQUEST',
-                        id: myPlayerId,
-                        name: name
-                      });
-                    }
-                  };
-
-                  sendJoin();
-                  joinRetryInterval = setInterval(sendJoin, 1200);
-
-                  joinTimeoutTimer = setTimeout(() => {
-                    if (!isSeated) {
-                      if (joinRetryInterval) clearInterval(joinRetryInterval);
-                      document.getElementById('networkStatusText').textContent =
-                        '⚠️ Table "' + code + '" not responding. Ensure the Host has tapped "Host Table" with code ' + code + '.';
-                    }
-                  }, 10000);
-                }
+          // Send join request immediately with fast retries
+          function sendJoin() {
+            if (!isSeated) {
+              document.getElementById('networkStatusText').textContent = `🤝 Seating at Table ${code}...`;
+              mqttPublish(`coup_v2/${code}/join`, {
+                type: 'JOIN_REQUEST',
+                id: myPlayerId,
+                name: name
               });
             }
-          });
+          }
+
+          sendJoin();
+          setTimeout(sendJoin, 400);
+          setTimeout(sendJoin, 1200);
+
+          setTimeout(() => {
+            if (!isSeated) {
+              document.getElementById('networkStatusText').textContent =
+                `⚠️ Table "${code}" not responding. Ensure the Host has tapped "Host Table" with code ${code}.`;
+            }
+          }, 4500);
         },
         (err) => {
           document.getElementById('networkStatusText').textContent = '❌ Connection failed: ' + (err.errorMessage || err);
@@ -1483,12 +1460,13 @@
 
     function broadcastLobbyState() {
       if (!isHost || !mqttClient || !mqttClient.isConnected()) return;
-      mqttPublish('coup_v2/' + currentRoomCode + '/lobby', {
+      mqttPublish(`coup_v2/${currentRoomCode}/lobby`, {
         type: 'LOBBY_UPDATE',
         lobbyPlayers
-      }, true);
+      });
     }
 
+    // Strict privacy: Each phone only receives its own live cards; all other cards & deck are hidden
     function syncStateToAll() {
       if (gameMode === 'local') {
         renderGameScreen();
@@ -1512,7 +1490,8 @@
         if (copy.exchangeData && copy.exchangeData.playerId !== p.id) {
           copy.exchangeData.options = [];
         }
-        mqttPublish('coup_v2/' + currentRoomCode + '/state/' + p.id, {
+
+        mqttPublish(`coup_v2/${currentRoomCode}/state/${p.id}`, {
           type: 'GAME_STATE_SYNC',
           state: copy
         });
@@ -1523,7 +1502,7 @@
       if (gameMode === 'local' || isHost) {
         processPlayerCommand(myPlayerId, command);
       } else if (mqttClient && mqttClient.isConnected()) {
-        mqttPublish('coup_v2/' + currentRoomCode + '/commands', {
+        mqttPublish(`coup_v2/${currentRoomCode}/commands`, {
           senderId: myPlayerId,
           command
         });
@@ -1537,776 +1516,776 @@
       document.getElementById('peekToggleBtn').style.display = 'inline-flex';
     }
 
-                        /*************************************************************************
-                         * 3. ORDERED FIFO COURT DECK & 0-COIN START ENGINE
-                         *************************************************************************/
-                        // Shuffled ONLY once at initial deal; afterwards strictly Draw from TOP (shift), Return to BOTTOM (push)
-                        function createInitialCourtDeck() {
-                          const deck = [];
-                          ['Duke', 'Assassin', 'Captain', 'Ambassador', 'Contessa'].forEach(role => {
-                            for (let i = 0; i < 3; i++) deck.push(role); // 15 actual cards total
-                          });
-                          for (let i = deck.length - 1; i > 0; i--) {
-                            const j = Math.floor(Math.random() * (i + 1));
-                            [deck[i], deck[j]] = [deck[j], deck[i]];
-                          }
-                          return deck;
-                        }
-
-                        function drawCardFromTop() {
-                          return gameState.deck.shift(); // TOP of deck
-                        }
-
-                        function putCardInBottom(role) {
-                          if (role && role !== 'Hidden') {
-                            gameState.deck.push(role); // BOTTOM of deck (no reshuffle)
-                          }
-                        }
-
-                        function startGame() {
-                          if (lobbyPlayers.length < 2) return alert('At least 2 players are needed!');
-
-                          const deck = createInitialCourtDeck();
-
-                          // Deal 2 cards from TOP of deck to each player, and start everyone at 0 Coins!
-                          const players = lobbyPlayers.map(lp => ({
-                            id: lp.id,
-                            name: lp.name,
-                            coins: 0, // 0 starting coins regardless of player count (2–6)
-                            alive: true,
-                            cards: [
-                              { role: deck.shift(), lost: false },
-                              { role: deck.shift(), lost: false }
-                            ]
-                          }));
-
-                          gameState = {
-                            started: true,
-                            treasury: 50,
-                            deck,
-                            players,
-                            turnIndex: 0,
-                            phase: 'TURN_DECISION',
-                            pendingAction: null,
-                            lossQueue: [],
-                            exchangeData: null,
-                            proofReveal: null,
-                            logs: [{
-                              text: `🎴 Game started with ${players.length} players! Every player starts with 0 Coins and 2 cards dealt from the top of the 15-card Court Deck.`,
-                              type: 'win'
-                            }]
-                          };
-
-                          showActiveGameUI();
-
-                          if (gameMode === 'local') {
-                            setupLocalPerspectiveBar();
-                          }
-
-                          syncStateToAll();
-                        }
-
-                        function setupLocalPerspectiveBar() {
-                          const bar = document.getElementById('localPerspectiveBar');
-                          const select = document.getElementById('perspectiveSelect');
-                          bar.style.display = 'flex';
-                          select.innerHTML = '';
-                          gameState.players.forEach(p => {
-                            const opt = document.createElement('option');
-                            opt.value = p.id;
-                            opt.textContent = p.name;
-                            select.appendChild(opt);
-                          });
-                          myPlayerId = gameState.players[0].id;
-                        }
-
-                        function switchLocalPerspective(playerId) {
-                          myPlayerId = playerId;
-                          renderGameScreen();
-                        }
-
-                        function addLog(text, type = '') {
-                          gameState.logs.unshift({ text, type });
-                          if (gameState.logs.length > 80) gameState.logs.pop();
-                        }
-
-                        function getPlayer(id) {
-                          return gameState.players.find(p => p.id === id);
-                        }
-
-                        function getActivePlayer() {
-                          return gameState.players[gameState.turnIndex];
-                        }
-
-                        function advanceToNextTurn() {
-                          const alivePlayers = gameState.players.filter(p => p.alive);
-                          if (alivePlayers.length <= 1) {
-                            gameState.phase = 'GAME_OVER';
-                            const winner = alivePlayers[0];
-                            if (winner) {
-                              addLog(`🏆 VICTORY! ${winner.name} is the last player standing!`, 'win');
-                            }
-                            syncStateToAll();
-                            return;
-                          }
-
-                          let nextIdx = (gameState.turnIndex + 1) % gameState.players.length;
-                          while (!gameState.players[nextIdx].alive) {
-                            nextIdx = (nextIdx + 1) % gameState.players.length;
-                          }
-
-                          gameState.turnIndex = nextIdx;
-                          gameState.phase = 'TURN_DECISION';
-                          gameState.pendingAction = null;
-                          gameState.exchangeData = null;
-
-                          if (gameMode === 'local') {
-                            myPlayerId = gameState.players[nextIdx].id;
-                            document.getElementById('perspectiveSelect').value = myPlayerId;
-                          }
-
-                          syncStateToAll();
-                        }
-
-                        /*************************************************************************
-                         * 4. AUTHORITATIVE GAME ENGINE (BLUFFS, FIFO DECK, QUIET CARD LOSS)
-                         *************************************************************************/
-                        function processPlayerCommand(senderId, cmd) {
-                          const actor = getActivePlayer();
-
-                          if (cmd.action === 'DISMISS_PROOF') {
-                            gameState.proofReveal = null;
-                            syncStateToAll();
-                            return;
-                          }
-
-                          // 1. DECLARE TURN ACTION
-                          if (cmd.action === 'DECLARE_ACTION' && gameState.phase === 'TURN_DECISION') {
-                            if (senderId !== actor.id && gameMode !== 'local') return;
-
-                            // Clear any old proof banner on new turn action
-                            gameState.proofReveal = null;
-
-                            const { moveType, targetId } = cmd;
-                            const target = targetId ? getPlayer(targetId) : null;
-
-                            if (actor.coins >= 10 && moveType !== 'COUP') return;
-
-                            if (moveType === 'INCOME') {
-                              actor.coins += 1;
-                              gameState.treasury = Math.max(0, gameState.treasury - 1);
-                              addLog(`🪙 ${actor.name} takes Income (+1 Coin).`);
-                              advanceToNextTurn();
-                              return;
-                            }
-
-                            if (moveType === 'COUP') {
-                              if (actor.coins < 7 || !target || !target.alive) return;
-                              actor.coins -= 7;
-                              gameState.treasury += 7;
-                              addLog(`💥 ${actor.name} launches a COUP (-7 Coins) against ${target.name}!`, 'challenge');
-                              queueQuietCardLoss(target.id, `Couped by ${actor.name}`, 'NEXT_TURN');
-                              return;
-                            }
-
-                            if (moveType === 'FOREIGN_AID') {
-                              addLog(`💰 ${actor.name} attempts Foreign Aid (+2 Coins). Any Duke may block.`, 'claim');
-                              gameState.phase = 'AWAITING_BLOCK_ONLY';
-                              gameState.pendingAction = {
-                                type: 'FOREIGN_AID',
-                                actorId: actor.id,
-                                targetId: null,
-                                claimedRole: null,
-                                costPaid: 0,
-                                passedIds: [actor.id],
-                                blockerId: null,
-                                blockerRole: null
-                              };
-                              syncStateToAll();
-                              return;
-                            }
-
-                            if (moveType === 'TAX') {
-                              addLog(`🟣 ${actor.name} claims DUKE to take Tax (+3 Coins).`, 'claim');
-                              gameState.phase = 'AWAITING_ACTION_RESPONSE';
-                              gameState.pendingAction = {
-                                type: 'TAX',
-                                actorId: actor.id,
-                                targetId: null,
-                                claimedRole: 'Duke',
-                                costPaid: 0,
-                                passedIds: [actor.id],
-                                blockerId: null,
-                                blockerRole: null
-                              };
-                              syncStateToAll();
-                              return;
-                            }
-
-                            if (moveType === 'ASSASSINATE') {
-                              if (actor.coins < 3 || !target || !target.alive) return;
-                              actor.coins -= 3;
-                              gameState.treasury += 3;
-                              addLog(`🔴 ${actor.name} pays 3 Coins and claims ASSASSIN targeting ${target.name}!`, 'claim');
-                              gameState.phase = 'AWAITING_ACTION_RESPONSE';
-                              gameState.pendingAction = {
-                                type: 'ASSASSINATE',
-                                actorId: actor.id,
-                                targetId: target.id,
-                                claimedRole: 'Assassin',
-                                costPaid: 3,
-                                passedIds: [actor.id],
-                                blockerId: null,
-                                blockerRole: null
-                              };
-                              syncStateToAll();
-                              return;
-                            }
-
-                            if (moveType === 'STEAL') {
-                              if (!target || !target.alive) return;
-                              addLog(`🔵 ${actor.name} claims CAPTAIN to steal up to 2 Coins from ${target.name}!`, 'claim');
-                              gameState.phase = 'AWAITING_ACTION_RESPONSE';
-                              gameState.pendingAction = {
-                                type: 'STEAL',
-                                actorId: actor.id,
-                                targetId: target.id,
-                                claimedRole: 'Captain',
-                                costPaid: 0,
-                                passedIds: [actor.id],
-                                blockerId: null,
-                                blockerRole: null
-                              };
-                              syncStateToAll();
-                              return;
-                            }
-
-                            if (moveType === 'EXCHANGE') {
-                              addLog(`🟢 ${actor.name} claims AMBASSADOR to exchange 2 cards with the Court Deck.`, 'claim');
-                              gameState.phase = 'AWAITING_ACTION_RESPONSE';
-                              gameState.pendingAction = {
-                                type: 'EXCHANGE',
-                                actorId: actor.id,
-                                targetId: null,
-                                claimedRole: 'Ambassador',
-                                costPaid: 0,
-                                passedIds: [actor.id],
-                                blockerId: null,
-                                blockerRole: null
-                              };
-                              syncStateToAll();
-                              return;
-                            }
-                          }
-
-                          // 2. PASS / ALLOW
-                          if (cmd.action === 'PASS_RESPONSE') {
-                            const pa = gameState.pendingAction;
-                            if (!pa) return;
-                            const passerId = cmd.actingPlayerId || senderId;
-                            if (!pa.passedIds.includes(passerId)) {
-                              pa.passedIds.push(passerId);
-                            }
-
-                            const aliveCount = gameState.players.filter(p => p.alive).length;
-                            if (pa.passedIds.length >= aliveCount || cmd.forceResolve) {
-                              if (gameState.phase === 'AWAITING_ACTION_RESPONSE' || gameState.phase === 'AWAITING_BLOCK_ONLY') {
-                                executeUnblockedAction();
-                              } else if (gameState.phase === 'AWAITING_BLOCK_RESPONSE') {
-                                addLog(`🛡️ Block by ${getPlayer(pa.blockerId).name} (${pa.blockerRole}) stands! Action prevented.`, 'block');
-                                advanceToNextTurn();
-                              }
-                            } else {
-                              syncStateToAll();
-                            }
-                            return;
-                          }
-
-                          // 3. CHALLENGE AN ACTION CLAIM
-                          if (cmd.action === 'CHALLENGE_ACTION' && gameState.phase === 'AWAITING_ACTION_RESPONSE') {
-                            const pa = gameState.pendingAction;
-                            const challenger = getPlayer(cmd.actingPlayerId || senderId);
-                            const claimer = getPlayer(pa.actorId);
-                            if (!challenger || !claimer || challenger.id === claimer.id) return;
-
-                            addLog(`⚡ ${challenger.name} challenges ${claimer.name}'s claim of ${pa.claimedRole}!`, 'challenge');
-
-                            const matchingCardIndex = claimer.cards.findIndex(c => !c.lost && c.role === pa.claimedRole);
-
-                            if (matchingCardIndex !== -1) {
-                              // NO BLUFF! The card IS right:
-                              // 1) Show the card to all players on the table
-                              // 2) Put the shown card into the BOTTOM of the Court Deck
-                              // 3) Draw a new replacement card from the TOP of the Court Deck
-                              const provenRole = claimer.cards[matchingCardIndex].role;
-                              putCardInBottom(provenRole);
-                              claimer.cards[matchingCardIndex].role = drawCardFromTop();
-
-                              gameState.proofReveal = {
-                                playerName: claimer.name,
-                                role: provenRole,
-                                detail: `${claimer.name} showed [${provenRole}] (No Bluff!), placed it at the BOTTOM of the Court Deck, and drew a new card from the TOP.`
-                              };
-
-                              addLog(`✅ NO BLUFF! ${claimer.name} shows [${provenRole}] to the table, puts it at the bottom of the deck, and draws a new card from the top! ${challenger.name} must quietly return 1 card to the deck.`, 'win');
-                              queueQuietCardLoss(challenger.id, `Lost challenge against ${claimer.name}'s ${provenRole}`, 'RESOLVE_ACTION');
-                            } else {
-                              // BLUFF CAUGHT!
-                              // Card is NOT shown to others; claimer quietly puts 1 of their cards into the bottom of the deck!
-                              if (pa.type === 'ASSASSINATE' && pa.costPaid > 0) {
-                                claimer.coins += pa.costPaid;
-                                gameState.treasury = Math.max(0, gameState.treasury - pa.costPaid);
-                                addLog(`❌ BLUFF! ${claimer.name} does not have ${pa.claimedRole} (3 Coins refunded). ${claimer.name} must quietly put 1 card into the bottom of the deck.`, 'challenge');
-                              } else {
-                                addLog(`❌ BLUFF! ${claimer.name} does not have ${pa.claimedRole}. ${claimer.name} must quietly put 1 card into the bottom of the deck.`, 'challenge');
-                              }
-                              queueQuietCardLoss(claimer.id, `Caught bluffing ${pa.claimedRole}`, 'NEXT_TURN');
-                            }
-                            return;
-                          }
-
-                          // 4. DECLARE A BLOCK
-                          if (cmd.action === 'DECLARE_BLOCK' && (gameState.phase === 'AWAITING_ACTION_RESPONSE' || gameState.phase === 'AWAITING_BLOCK_ONLY')) {
-                            const pa = gameState.pendingAction;
-                            const blocker = getPlayer(cmd.actingPlayerId || senderId);
-                            const blockRole = cmd.blockRole;
-                            if (!blocker || !blocker.alive || blocker.id === pa.actorId) return;
-
-                            if ((pa.type === 'ASSASSINATE' || pa.type === 'STEAL') && blocker.id !== pa.targetId) return;
-
-                            pa.blockerId = blocker.id;
-                            pa.blockerRole = blockRole;
-                            pa.passedIds = [blocker.id];
-                            gameState.phase = 'AWAITING_BLOCK_RESPONSE';
-
-                            addLog(`🛡️ ${blocker.name} claims ${blockRole.toUpperCase()} to block ${getPlayer(pa.actorId).name}'s ${pa.type}!`, 'block');
-                            syncStateToAll();
-                            return;
-                          }
-
-                          // 5. CHALLENGE A BLOCK
-                          if (cmd.action === 'CHALLENGE_BLOCK' && gameState.phase === 'AWAITING_BLOCK_RESPONSE') {
-                            const pa = gameState.pendingAction;
-                            const challenger = getPlayer(cmd.actingPlayerId || senderId);
-                            const blocker = getPlayer(pa.blockerId);
-                            if (!challenger || !blocker || challenger.id === blocker.id) return;
-
-                            addLog(`⚡ ${challenger.name} challenges ${blocker.name}'s ${pa.blockerRole} block!`, 'challenge');
-
-                            const matchingCardIndex = blocker.cards.findIndex(c => !c.lost && c.role === pa.blockerRole);
-
-                            if (matchingCardIndex !== -1) {
-                              // NO BLUFF on Block! Show card to table, put at BOTTOM of deck, draw new from TOP of deck
-                              const provenRole = blocker.cards[matchingCardIndex].role;
-                              putCardInBottom(provenRole);
-                              blocker.cards[matchingCardIndex].role = drawCardFromTop();
-
-                              gameState.proofReveal = {
-                                playerName: blocker.name,
-                                role: provenRole,
-                                detail: `${blocker.name} showed [${provenRole}] (No Bluff!), placed it at the BOTTOM of the Court Deck, and drew a new card from the TOP.`
-                              };
-
-                              addLog(`✅ NO BLUFF! ${blocker.name} shows [${provenRole}] to the table, puts it at the bottom of the deck, and draws a new card from the top! Block succeeds & ${challenger.name} loses 1 card.`, 'win');
-                              queueQuietCardLoss(challenger.id, `Lost challenge against ${blocker.name}'s ${provenRole} block`, 'NEXT_TURN');
-                            } else {
-                              // BLUFF on Block! Blocker quietly puts 1 card into the bottom of the deck, and action proceeds!
-                              addLog(`❌ BLOCK BLUFF! ${blocker.name} does not have ${pa.blockerRole}. ${blocker.name} must quietly put 1 card into the bottom of the deck, and the ${pa.type} goes through!`, 'challenge');
-                              queueQuietCardLoss(blocker.id, `Caught bluffing ${pa.blockerRole} block`, 'RESOLVE_ACTION');
-                            }
-                            return;
-                          }
-
-                          // 6. QUIETLY RETURN LOST CARD TO BOTTOM OF DECK (NOT SHOWN TO OTHERS)
-                          if (cmd.action === 'LOSE_CARD' && gameState.phase === 'AWAITING_LOSS') {
-                            const currentLoss = gameState.lossQueue[0];
-                            if (!currentLoss) return;
-                            const loser = getPlayer(currentLoss.playerId);
-                            const card = loser.cards[cmd.cardIndex];
-                            if (!card || card.lost) return;
-
-                            // Quietly place the lost card into the BOTTOM of the Court Deck without showing it to other players
-                            putCardInBottom(card.role);
-                            card.lost = true;
-                            card.role = 'Hidden';
-
-                            addLog(`📥 ${loser.name} quietly puts 1 card into the bottom of the Court Deck (${currentLoss.reason}).`, 'challenge');
-
-                            const stillAlive = loser.cards.some(c => !c.lost);
-                            if (!stillAlive) {
-                              loser.alive = false;
-                              gameState.treasury += loser.coins;
-                              loser.coins = 0;
-                              addLog(`⚰️ ${loser.name} has 0 cards remaining and is out of the game!`, 'challenge');
-                            }
-
-                            gameState.lossQueue.shift();
-
-                            if (gameState.lossQueue.length > 0) {
-                              syncStateToAll();
-                            } else if (currentLoss.nextCallbackType === 'RESOLVE_ACTION') {
-                              executeUnblockedAction();
-                            } else {
-                              advanceToNextTurn();
-                            }
-                            return;
-                          }
-
-                          // 7. AMBASSADOR EXCHANGE COMPLETION (RETURN UNCHOSEN TO BOTTOM OF DECK)
-                          if (cmd.action === 'COMPLETE_EXCHANGE' && gameState.phase === 'AWAITING_EXCHANGE') {
-                            const ex = gameState.exchangeData;
-                            if (!ex || (senderId !== ex.playerId && gameMode !== 'local')) return;
-
-                            const chosenIndices = cmd.chosenIndices || [];
-                            if (chosenIndices.length !== ex.keepCount) return;
-
-                            const player = getPlayer(ex.playerId);
-                            const keptRoles = chosenIndices.map(idx => ex.options[idx]);
-                            const returnedRoles = ex.options.filter((_, idx) => !chosenIndices.includes(idx));
-
-                            let kIdx = 0;
-                            player.cards.forEach(c => {
-                              if (!c.lost) {
-                                c.role = keptRoles[kIdx++];
-                              }
-                            });
-
-                            // Quietly place returned cards into the BOTTOM of the Court Deck
-                            returnedRoles.forEach(r => putCardInBottom(r));
-
-                            addLog(`🟢 ${player.name} kept ${ex.keepCount} card(s) and quietly put ${returnedRoles.length} card(s) into the bottom of the Court Deck.`);
-                            advanceToNextTurn();
-                          }
-                        }
-
-                        // Queues a player to quietly return 1 card to the bottom of the deck
-                        function queueQuietCardLoss(playerId, reason, nextCallbackType) {
-                          const player = getPlayer(playerId);
-                          if (!player || !player.alive) {
-                            if (nextCallbackType === 'RESOLVE_ACTION') executeUnblockedAction();
-                            else advanceToNextTurn();
-                            return;
-                          }
-
-                          const activeIndices = [];
-                          player.cards.forEach((c, idx) => {
-                            if (!c.lost) activeIndices.push(idx);
-                          });
-
-                          // If player only has 1 card left, quietly put it into the bottom of the deck automatically
-                          if (activeIndices.length === 1) {
-                            const idx = activeIndices[0];
-                            putCardInBottom(player.cards[idx].role);
-                            player.cards[idx].lost = true;
-                            player.cards[idx].role = 'Hidden';
-                            player.alive = false;
-                            gameState.treasury += player.coins;
-                            player.coins = 0;
-                            addLog(`📥 ${player.name} quietly puts their last card into the bottom of the Court Deck (${reason}) and is eliminated!`, 'challenge');
-
-                            if (nextCallbackType === 'RESOLVE_ACTION') executeUnblockedAction();
-                            else advanceToNextTurn();
-                            return;
-                          }
-
-                          gameState.phase = 'AWAITING_LOSS';
-                          gameState.lossQueue.push({ playerId, reason, nextCallbackType });
-                          if (gameMode === 'local') {
-                            myPlayerId = playerId;
-                            document.getElementById('perspectiveSelect').value = myPlayerId;
-                          }
-                          syncStateToAll();
-                        }
-
-                        function executeUnblockedAction() {
-                          const pa = gameState.pendingAction;
-                          if (!pa) return advanceToNextTurn();
-
-                          const actor = getPlayer(pa.actorId);
-                          const target = pa.targetId ? getPlayer(pa.targetId) : null;
-
-                          if (pa.type === 'FOREIGN_AID') {
-                            actor.coins += 2;
-                            gameState.treasury = Math.max(0, gameState.treasury - 2);
-                            addLog(`💰 ${actor.name} takes Foreign Aid (+2 Coins).`);
-                            advanceToNextTurn();
-                          } else if (pa.type === 'TAX') {
-                            actor.coins += 3;
-                            gameState.treasury = Math.max(0, gameState.treasury - 3);
-                            addLog(`🟣 ${actor.name} collects Duke's Tax (+3 Coins).`);
-                            advanceToNextTurn();
-                          } else if (pa.type === 'STEAL') {
-                            if (target && target.alive) {
-                              const stolen = Math.min(2, target.coins);
-                              target.coins -= stolen;
-                              actor.coins += stolen;
-                              addLog(`🔵 ${actor.name} steals ${stolen} Coin(s) from ${target.name}!`);
-                            }
-                            advanceToNextTurn();
-                          } else if (pa.type === 'ASSASSINATE') {
-                            if (target && target.alive) {
-                              addLog(`🗡️ ${actor.name}'s Assassination hits ${target.name}!`, 'challenge');
-                              queueQuietCardLoss(target.id, `Assassinated by ${actor.name}`, 'NEXT_TURN');
-                            } else {
-                              advanceToNextTurn();
-                            }
-                          } else if (pa.type === 'EXCHANGE') {
-                            const liveRoles = actor.cards.filter(c => !c.lost).map(c => c.role);
-                            // Draw 2 cards from the TOP of the Court Deck
-                            const drawn = [drawCardFromTop(), drawCardFromTop()].filter(Boolean);
-                            gameState.phase = 'AWAITING_EXCHANGE';
-                            gameState.exchangeData = {
-                              playerId: actor.id,
-                              options: [...liveRoles, ...drawn],
-                              keepCount: liveRoles.length
-                            };
-                            if (gameMode === 'local') {
-                              myPlayerId = actor.id;
-                              document.getElementById('perspectiveSelect').value = myPlayerId;
-                            }
-                            syncStateToAll();
-                          }
-                        }
-
-                        /*************************************************************************
-                         * 5. UI RENDERING
-                         *************************************************************************/
-                        let pendingMoveWaitingTarget = null;
-                        let selectedExchangeIndices = [];
-
-                        function renderGameScreen() {
-                          document.getElementById('treasuryCoinsText').textContent = gameState.treasury;
-                          document.getElementById('courtDeckCountText').textContent = gameState.deck.length;
-
-                          const activePlayer = getActivePlayer();
-                          const me = getPlayer(myPlayerId) || gameState.players[0];
-
-                          document.getElementById('turnStatusHeader').textContent =
-                            gameState.phase === 'GAME_OVER'
-                              ? '🏆 Game Over'
-                              : `${activePlayer.name}'s Turn`;
-
-                          renderProofBanner();
-                          renderPhaseBanner(me);
-                          renderSeatsGrid(me);
-                          renderCommandDeck(me, activePlayer);
-                          renderLogs();
-
-                          if (gameState.phase === 'AWAITING_EXCHANGE' && gameState.exchangeData && gameState.exchangeData.playerId === me.id) {
-                            openAmbassadorModal();
-                          } else {
-                            closeModal('exchangeModal');
-                          }
-                        }
-
-                        function renderProofBanner() {
-                          const banner = document.getElementById('proofBanner');
-                          if (!gameState.proofReveal) {
-                            banner.style.display = 'none';
-                            return;
-                          }
-                          const pr = gameState.proofReveal;
-                          banner.style.display = 'flex';
-                          const img = document.getElementById('proofCardImg');
-                          img.src = getCardImageSrc(pr.role);
-                          img.onerror = function () { handleImageFallback(this, pr.role); };
-                          document.getElementById('proofBannerTitle').textContent = `✅ NO BLUFF! ${pr.playerName} Revealed ${pr.role.toUpperCase()}!`;
-                          document.getElementById('proofBannerSub').textContent = pr.detail;
-                        }
-
-                        function dismissProofBanner() {
-                          sendCommand({ action: 'DISMISS_PROOF' });
-                        }
-
-                        function renderPhaseBanner(me) {
-                          const banner = document.getElementById('phaseBanner');
-                          const title = document.getElementById('phaseBannerTitle');
-                          const sub = document.getElementById('phaseBannerSub');
-                          const btns = document.getElementById('phaseBannerButtons');
-                          btns.innerHTML = '';
-
-                          const pa = gameState.pendingAction;
-
-                          if (gameState.phase === 'AWAITING_ACTION_RESPONSE' && pa) {
-                            banner.style.display = 'flex';
-                            const actor = getPlayer(pa.actorId);
-                            const target = pa.targetId ? getPlayer(pa.targetId) : null;
-                            title.textContent = `🚨 ${actor.name} claims [${pa.claimedRole}] for ${pa.type}${target ? ' on ' + target.name : ''}!`;
-                            sub.textContent = `Players at the table may Challenge Bluff, Block, or Allow (${pa.passedIds.length}/${gameState.players.filter(p => p.alive).length} allowed)`;
-
-                            if (me.alive && me.id !== actor.id) {
-                              const chalBtn = document.createElement('button');
-                              chalBtn.className = 'btn btn-crimson';
-                              chalBtn.textContent = `🔥 Call Bluff (Challenge ${pa.claimedRole})`;
-                              chalBtn.onclick = () => sendCommand({ action: 'CHALLENGE_ACTION', actingPlayerId: me.id });
-                              btns.appendChild(chalBtn);
-
-                              if (pa.type === 'ASSASSINATE' && me.id === pa.targetId) {
-                                const bBtn = document.createElement('button');
-                                bBtn.className = 'btn btn-gold';
-                                bBtn.textContent = `🛡️ Block with Contessa`;
-                                bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: 'Contessa', actingPlayerId: me.id });
-                                btns.appendChild(bBtn);
-                              }
-
-                              if (pa.type === 'STEAL' && me.id === pa.targetId) {
-                                ['Captain', 'Ambassador'].forEach(r => {
-                                  const bBtn = document.createElement('button');
-                                  bBtn.className = 'btn btn-gold';
-                                  bBtn.textContent = `🛡️ Block with ${r}`;
-                                  bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: r, actingPlayerId: me.id });
-                                  btns.appendChild(bBtn);
-                                });
-                              }
-
-                              const alreadyPassed = pa.passedIds.includes(me.id);
-                              const passBtn = document.createElement('button');
-                              passBtn.className = 'btn btn-emerald';
-                              passBtn.disabled = alreadyPassed;
-                              passBtn.textContent = alreadyPassed ? '✓ Allowed' : '👍 Allow / Pass';
-                              passBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', actingPlayerId: me.id });
-                              btns.appendChild(passBtn);
-                            }
-
-                            if (isHost || gameMode === 'local') {
-                              const forceBtn = document.createElement('button');
-                              forceBtn.className = 'btn';
-                              forceBtn.textContent = '⏩ Table Agreed (Resolve Now)';
-                              forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
-                              btns.appendChild(forceBtn);
-                            }
-                            return;
-                          }
-
-                          if (gameState.phase === 'AWAITING_BLOCK_ONLY' && pa) {
-                            banner.style.display = 'flex';
-                            const actor = getPlayer(pa.actorId);
-                            title.textContent = `💰 ${actor.name} is taking Foreign Aid (+2 Coins).`;
-                            sub.textContent = `Anyone may claim DUKE to block, or Allow.`;
-
-                            if (me.alive && me.id !== actor.id) {
-                              const bBtn = document.createElement('button');
-                              bBtn.className = 'btn btn-gold';
-                              bBtn.textContent = `🟣 Claim Duke to Block`;
-                              bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: 'Duke', actingPlayerId: me.id });
-                              btns.appendChild(bBtn);
-
-                              const alreadyPassed = pa.passedIds.includes(me.id);
-                              const passBtn = document.createElement('button');
-                              passBtn.className = 'btn btn-emerald';
-                              passBtn.disabled = alreadyPassed;
-                              passBtn.textContent = alreadyPassed ? '✓ Allowed' : '👍 Allow';
-                              passBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', actingPlayerId: me.id });
-                              btns.appendChild(passBtn);
-                            }
-
-                            if (isHost || gameMode === 'local') {
-                              const forceBtn = document.createElement('button');
-                              forceBtn.className = 'btn';
-                              forceBtn.textContent = '⏩ Table Agreed (Resolve Now)';
-                              forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
-                              btns.appendChild(forceBtn);
-                            }
-                            return;
-                          }
-
-                          if (gameState.phase === 'AWAITING_BLOCK_RESPONSE' && pa) {
-                            banner.style.display = 'flex';
-                            const blocker = getPlayer(pa.blockerId);
-                            title.textContent = `🛡️ ${blocker.name} claims [${pa.blockerRole}] to BLOCK!`;
-                            sub.textContent = `Challenge ${blocker.name}'s ${pa.blockerRole} or Accept the Block.`;
-
-                            if (me.alive && me.id !== blocker.id) {
-                              const chalBtn = document.createElement('button');
-                              chalBtn.className = 'btn btn-crimson';
-                              chalBtn.textContent = `🔥 Call Bluff (Challenge ${pa.blockerRole})`;
-                              chalBtn.onclick = () => sendCommand({ action: 'CHALLENGE_BLOCK', actingPlayerId: me.id });
-                              btns.appendChild(chalBtn);
-
-                              const alreadyPassed = pa.passedIds.includes(me.id);
-                              const passBtn = document.createElement('button');
-                              passBtn.className = 'btn btn-emerald';
-                              passBtn.disabled = alreadyPassed;
-                              passBtn.textContent = alreadyPassed ? '✓ Accepted' : '👍 Accept Block';
-                              passBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', actingPlayerId: me.id });
-                              btns.appendChild(passBtn);
-                            }
-
-                            if (isHost || gameMode === 'local') {
-                              const forceBtn = document.createElement('button');
-                              forceBtn.className = 'btn';
-                              forceBtn.textContent = '⏩ Accept Block Now';
-                              forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
-                              btns.appendChild(forceBtn);
-                            }
-                            return;
-                          }
-
-                          if (gameState.phase === 'AWAITING_LOSS' && gameState.lossQueue.length > 0) {
-                            banner.style.display = 'flex';
-                            const currentLoss = gameState.lossQueue[0];
-                            const loser = getPlayer(currentLoss.playerId);
-                            title.textContent = `📥 ${loser.name} must quietly put 1 card into the bottom of the Court Deck!`;
-                            sub.textContent = loser.id === me.id
-                              ? `Tap one of your cards below to quietly return it to the bottom of the deck (others will NOT see what card you put back).`
-                              : `Waiting for ${loser.name} to quietly return 1 card to the bottom of the deck...`;
-                            return;
-                          }
-
-                          if (gameState.phase === 'GAME_OVER') {
-                            banner.style.display = 'flex';
-                            const winner = gameState.players.find(p => p.alive);
-                            title.textContent = `👑 ${winner ? winner.name : 'Player'} Wins the Game!`;
-                            sub.textContent = `All other players have returned their cards to the deck.`;
-                            if (isHost || gameMode === 'local') {
-                              const againBtn = document.createElement('button');
-                              againBtn.className = 'btn btn-gold';
-                              againBtn.textContent = '🔄 Deal New Game (0 Coins)';
-                              againBtn.onclick = () => startGame();
-                              btns.appendChild(againBtn);
-                            }
-                            return;
-                          }
-
-                          banner.style.display = 'none';
-                        }
-
-                        function renderSeatsGrid(me) {
-                          const grid = document.getElementById('seatsGrid');
-                          grid.innerHTML = '';
-
-                          const currentLoss = gameState.phase === 'AWAITING_LOSS' ? gameState.lossQueue[0] : null;
-
-                          // Sort so "YOU" appear first on your own phone screen for easy tabletop viewing
-                          const orderedPlayers = [...gameState.players].sort((a, b) => (a.id === me.id ? -1 : b.id === me.id ? 1 : 0));
-
-                          orderedPlayers.forEach(p => {
-                            const realIdx = gameState.players.findIndex(x => x.id === p.id);
-                            const isTurn = realIdx === gameState.turnIndex && gameState.phase !== 'GAME_OVER';
-                            const isMe = p.id === me.id;
-                            const pod = document.createElement('div');
-                            pod.className = `player-pod ${isTurn ? 'active-turn' : ''} ${isMe ? 'is-me' : ''} ${!p.alive ? 'eliminated' : ''}`;
-
-                            let cardsHtml = '';
-                            p.cards.forEach((card, cIdx) => {
-                              if (card.lost) {
-                                // Card was quietly returned to bottom of deck (never shown to anyone)
-                                cardsHtml += `
+    /*************************************************************************
+     * 3. ORDERED FIFO COURT DECK & 0-COIN START ENGINE
+     *************************************************************************/
+    // Shuffled ONLY once at initial deal; afterwards strictly Draw from TOP (shift), Return to BOTTOM (push)
+    function createInitialCourtDeck() {
+      const deck = [];
+      ['Duke', 'Assassin', 'Captain', 'Ambassador', 'Contessa'].forEach(role => {
+        for (let i = 0; i < 3; i++) deck.push(role); // 15 actual cards total
+      });
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      return deck;
+    }
+
+    function drawCardFromTop() {
+      return gameState.deck.shift(); // TOP of deck
+    }
+
+    function putCardInBottom(role) {
+      if (role && role !== 'Hidden') {
+        gameState.deck.push(role); // BOTTOM of deck (no reshuffle)
+      }
+    }
+
+    function startGame() {
+      if (lobbyPlayers.length < 2) return alert('At least 2 players are needed!');
+
+      const deck = createInitialCourtDeck();
+
+      // Deal 2 cards from TOP of deck to each player, and start everyone at 0 Coins!
+      const players = lobbyPlayers.map(lp => ({
+        id: lp.id,
+        name: lp.name,
+        coins: 0, // 0 starting coins regardless of player count (2–6)
+        alive: true,
+        cards: [
+          { role: deck.shift(), lost: false },
+          { role: deck.shift(), lost: false }
+        ]
+      }));
+
+      gameState = {
+        started: true,
+        treasury: 50,
+        deck,
+        players,
+        turnIndex: 0,
+        phase: 'TURN_DECISION',
+        pendingAction: null,
+        lossQueue: [],
+        exchangeData: null,
+        proofReveal: null,
+        logs: [{
+          text: `🎴 Game started with ${players.length} players! Every player starts with 0 Coins and 2 cards dealt from the top of the 15-card Court Deck.`,
+          type: 'win'
+        }]
+      };
+
+      showActiveGameUI();
+
+      if (gameMode === 'local') {
+        setupLocalPerspectiveBar();
+      }
+
+      syncStateToAll();
+    }
+
+    function setupLocalPerspectiveBar() {
+      const bar = document.getElementById('localPerspectiveBar');
+      const select = document.getElementById('perspectiveSelect');
+      bar.style.display = 'flex';
+      select.innerHTML = '';
+      gameState.players.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      });
+      myPlayerId = gameState.players[0].id;
+    }
+
+    function switchLocalPerspective(playerId) {
+      myPlayerId = playerId;
+      renderGameScreen();
+    }
+
+    function addLog(text, type = '') {
+      gameState.logs.unshift({ text, type });
+      if (gameState.logs.length > 80) gameState.logs.pop();
+    }
+
+    function getPlayer(id) {
+      return gameState.players.find(p => p.id === id);
+    }
+
+    function getActivePlayer() {
+      return gameState.players[gameState.turnIndex];
+    }
+
+    function advanceToNextTurn() {
+      const alivePlayers = gameState.players.filter(p => p.alive);
+      if (alivePlayers.length <= 1) {
+        gameState.phase = 'GAME_OVER';
+        const winner = alivePlayers[0];
+        if (winner) {
+          addLog(`🏆 VICTORY! ${winner.name} is the last player standing!`, 'win');
+        }
+        syncStateToAll();
+        return;
+      }
+
+      let nextIdx = (gameState.turnIndex + 1) % gameState.players.length;
+      while (!gameState.players[nextIdx].alive) {
+        nextIdx = (nextIdx + 1) % gameState.players.length;
+      }
+
+      gameState.turnIndex = nextIdx;
+      gameState.phase = 'TURN_DECISION';
+      gameState.pendingAction = null;
+      gameState.exchangeData = null;
+
+      if (gameMode === 'local') {
+        myPlayerId = gameState.players[nextIdx].id;
+        document.getElementById('perspectiveSelect').value = myPlayerId;
+      }
+
+      syncStateToAll();
+    }
+
+    /*************************************************************************
+     * 4. AUTHORITATIVE GAME ENGINE (BLUFFS, FIFO DECK, QUIET CARD LOSS)
+     *************************************************************************/
+    function processPlayerCommand(senderId, cmd) {
+      const actor = getActivePlayer();
+
+      if (cmd.action === 'DISMISS_PROOF') {
+        gameState.proofReveal = null;
+        syncStateToAll();
+        return;
+      }
+
+      // 1. DECLARE TURN ACTION
+      if (cmd.action === 'DECLARE_ACTION' && gameState.phase === 'TURN_DECISION') {
+        if (senderId !== actor.id && gameMode !== 'local') return;
+
+        // Clear any old proof banner on new turn action
+        gameState.proofReveal = null;
+
+        const { moveType, targetId } = cmd;
+        const target = targetId ? getPlayer(targetId) : null;
+
+        if (actor.coins >= 10 && moveType !== 'COUP') return;
+
+        if (moveType === 'INCOME') {
+          actor.coins += 1;
+          gameState.treasury = Math.max(0, gameState.treasury - 1);
+          addLog(`🪙 ${actor.name} takes Income (+1 Coin).`);
+          advanceToNextTurn();
+          return;
+        }
+
+        if (moveType === 'COUP') {
+          if (actor.coins < 7 || !target || !target.alive) return;
+          actor.coins -= 7;
+          gameState.treasury += 7;
+          addLog(`💥 ${actor.name} launches a COUP (-7 Coins) against ${target.name}!`, 'challenge');
+          queueQuietCardLoss(target.id, `Couped by ${actor.name}`, 'NEXT_TURN');
+          return;
+        }
+
+        if (moveType === 'FOREIGN_AID') {
+          addLog(`💰 ${actor.name} attempts Foreign Aid (+2 Coins). Any Duke may block.`, 'claim');
+          gameState.phase = 'AWAITING_BLOCK_ONLY';
+          gameState.pendingAction = {
+            type: 'FOREIGN_AID',
+            actorId: actor.id,
+            targetId: null,
+            claimedRole: null,
+            costPaid: 0,
+            passedIds: [actor.id],
+            blockerId: null,
+            blockerRole: null
+          };
+          syncStateToAll();
+          return;
+        }
+
+        if (moveType === 'TAX') {
+          addLog(`🟣 ${actor.name} claims DUKE to take Tax (+3 Coins).`, 'claim');
+          gameState.phase = 'AWAITING_ACTION_RESPONSE';
+          gameState.pendingAction = {
+            type: 'TAX',
+            actorId: actor.id,
+            targetId: null,
+            claimedRole: 'Duke',
+            costPaid: 0,
+            passedIds: [actor.id],
+            blockerId: null,
+            blockerRole: null
+          };
+          syncStateToAll();
+          return;
+        }
+
+        if (moveType === 'ASSASSINATE') {
+          if (actor.coins < 3 || !target || !target.alive) return;
+          actor.coins -= 3;
+          gameState.treasury += 3;
+          addLog(`🔴 ${actor.name} pays 3 Coins and claims ASSASSIN targeting ${target.name}!`, 'claim');
+          gameState.phase = 'AWAITING_ACTION_RESPONSE';
+          gameState.pendingAction = {
+            type: 'ASSASSINATE',
+            actorId: actor.id,
+            targetId: target.id,
+            claimedRole: 'Assassin',
+            costPaid: 3,
+            passedIds: [actor.id],
+            blockerId: null,
+            blockerRole: null
+          };
+          syncStateToAll();
+          return;
+        }
+
+        if (moveType === 'STEAL') {
+          if (!target || !target.alive) return;
+          addLog(`🔵 ${actor.name} claims CAPTAIN to steal up to 2 Coins from ${target.name}!`, 'claim');
+          gameState.phase = 'AWAITING_ACTION_RESPONSE';
+          gameState.pendingAction = {
+            type: 'STEAL',
+            actorId: actor.id,
+            targetId: target.id,
+            claimedRole: 'Captain',
+            costPaid: 0,
+            passedIds: [actor.id],
+            blockerId: null,
+            blockerRole: null
+          };
+          syncStateToAll();
+          return;
+        }
+
+        if (moveType === 'EXCHANGE') {
+          addLog(`🟢 ${actor.name} claims AMBASSADOR to exchange 2 cards with the Court Deck.`, 'claim');
+          gameState.phase = 'AWAITING_ACTION_RESPONSE';
+          gameState.pendingAction = {
+            type: 'EXCHANGE',
+            actorId: actor.id,
+            targetId: null,
+            claimedRole: 'Ambassador',
+            costPaid: 0,
+            passedIds: [actor.id],
+            blockerId: null,
+            blockerRole: null
+          };
+          syncStateToAll();
+          return;
+        }
+      }
+
+      // 2. PASS / ALLOW
+      if (cmd.action === 'PASS_RESPONSE') {
+        const pa = gameState.pendingAction;
+        if (!pa) return;
+        const passerId = cmd.actingPlayerId || senderId;
+        if (!pa.passedIds.includes(passerId)) {
+          pa.passedIds.push(passerId);
+        }
+
+        const aliveCount = gameState.players.filter(p => p.alive).length;
+        if (pa.passedIds.length >= aliveCount || cmd.forceResolve) {
+          if (gameState.phase === 'AWAITING_ACTION_RESPONSE' || gameState.phase === 'AWAITING_BLOCK_ONLY') {
+            executeUnblockedAction();
+          } else if (gameState.phase === 'AWAITING_BLOCK_RESPONSE') {
+            addLog(`🛡️ Block by ${getPlayer(pa.blockerId).name} (${pa.blockerRole}) stands! Action prevented.`, 'block');
+            advanceToNextTurn();
+          }
+        } else {
+          syncStateToAll();
+        }
+        return;
+      }
+
+      // 3. CHALLENGE AN ACTION CLAIM
+      if (cmd.action === 'CHALLENGE_ACTION' && gameState.phase === 'AWAITING_ACTION_RESPONSE') {
+        const pa = gameState.pendingAction;
+        const challenger = getPlayer(cmd.actingPlayerId || senderId);
+        const claimer = getPlayer(pa.actorId);
+        if (!challenger || !claimer || challenger.id === claimer.id) return;
+
+        addLog(`⚡ ${challenger.name} challenges ${claimer.name}'s claim of ${pa.claimedRole}!`, 'challenge');
+
+        const matchingCardIndex = claimer.cards.findIndex(c => !c.lost && c.role === pa.claimedRole);
+
+        if (matchingCardIndex !== -1) {
+          // NO BLUFF! The card IS right:
+          // 1) Show the card to all players on the table
+          // 2) Put the shown card into the BOTTOM of the Court Deck
+          // 3) Draw a new replacement card from the TOP of the Court Deck
+          const provenRole = claimer.cards[matchingCardIndex].role;
+          putCardInBottom(provenRole);
+          claimer.cards[matchingCardIndex].role = drawCardFromTop();
+
+          gameState.proofReveal = {
+            playerName: claimer.name,
+            role: provenRole,
+            detail: `${claimer.name} showed [${provenRole}] (No Bluff!), placed it at the BOTTOM of the Court Deck, and drew a new card from the TOP.`
+          };
+
+          addLog(`✅ NO BLUFF! ${claimer.name} shows [${provenRole}] to the table, puts it at the bottom of the deck, and draws a new card from the top! ${challenger.name} must quietly return 1 card to the deck.`, 'win');
+          queueQuietCardLoss(challenger.id, `Lost challenge against ${claimer.name}'s ${provenRole}`, 'RESOLVE_ACTION');
+        } else {
+          // BLUFF CAUGHT!
+          // Card is NOT shown to others; claimer quietly puts 1 of their cards into the bottom of the deck!
+          if (pa.type === 'ASSASSINATE' && pa.costPaid > 0) {
+            claimer.coins += pa.costPaid;
+            gameState.treasury = Math.max(0, gameState.treasury - pa.costPaid);
+            addLog(`❌ BLUFF! ${claimer.name} does not have ${pa.claimedRole} (3 Coins refunded). ${claimer.name} must quietly put 1 card into the bottom of the deck.`, 'challenge');
+          } else {
+            addLog(`❌ BLUFF! ${claimer.name} does not have ${pa.claimedRole}. ${claimer.name} must quietly put 1 card into the bottom of the deck.`, 'challenge');
+          }
+          queueQuietCardLoss(claimer.id, `Caught bluffing ${pa.claimedRole}`, 'NEXT_TURN');
+        }
+        return;
+      }
+
+      // 4. DECLARE A BLOCK
+      if (cmd.action === 'DECLARE_BLOCK' && (gameState.phase === 'AWAITING_ACTION_RESPONSE' || gameState.phase === 'AWAITING_BLOCK_ONLY')) {
+        const pa = gameState.pendingAction;
+        const blocker = getPlayer(cmd.actingPlayerId || senderId);
+        const blockRole = cmd.blockRole;
+        if (!blocker || !blocker.alive || blocker.id === pa.actorId) return;
+
+        if ((pa.type === 'ASSASSINATE' || pa.type === 'STEAL') && blocker.id !== pa.targetId) return;
+
+        pa.blockerId = blocker.id;
+        pa.blockerRole = blockRole;
+        pa.passedIds = [blocker.id];
+        gameState.phase = 'AWAITING_BLOCK_RESPONSE';
+
+        addLog(`🛡️ ${blocker.name} claims ${blockRole.toUpperCase()} to block ${getPlayer(pa.actorId).name}'s ${pa.type}!`, 'block');
+        syncStateToAll();
+        return;
+      }
+
+      // 5. CHALLENGE A BLOCK
+      if (cmd.action === 'CHALLENGE_BLOCK' && gameState.phase === 'AWAITING_BLOCK_RESPONSE') {
+        const pa = gameState.pendingAction;
+        const challenger = getPlayer(cmd.actingPlayerId || senderId);
+        const blocker = getPlayer(pa.blockerId);
+        if (!challenger || !blocker || challenger.id === blocker.id) return;
+
+        addLog(`⚡ ${challenger.name} challenges ${blocker.name}'s ${pa.blockerRole} block!`, 'challenge');
+
+        const matchingCardIndex = blocker.cards.findIndex(c => !c.lost && c.role === pa.blockerRole);
+
+        if (matchingCardIndex !== -1) {
+          // NO BLUFF on Block! Show card to table, put at BOTTOM of deck, draw new from TOP of deck
+          const provenRole = blocker.cards[matchingCardIndex].role;
+          putCardInBottom(provenRole);
+          blocker.cards[matchingCardIndex].role = drawCardFromTop();
+
+          gameState.proofReveal = {
+            playerName: blocker.name,
+            role: provenRole,
+            detail: `${blocker.name} showed [${provenRole}] (No Bluff!), placed it at the BOTTOM of the Court Deck, and drew a new card from the TOP.`
+          };
+
+          addLog(`✅ NO BLUFF! ${blocker.name} shows [${provenRole}] to the table, puts it at the bottom of the deck, and draws a new card from the top! Block succeeds & ${challenger.name} loses 1 card.`, 'win');
+          queueQuietCardLoss(challenger.id, `Lost challenge against ${blocker.name}'s ${provenRole} block`, 'NEXT_TURN');
+        } else {
+          // BLUFF on Block! Blocker quietly puts 1 card into the bottom of the deck, and action proceeds!
+          addLog(`❌ BLOCK BLUFF! ${blocker.name} does not have ${pa.blockerRole}. ${blocker.name} must quietly put 1 card into the bottom of the deck, and the ${pa.type} goes through!`, 'challenge');
+          queueQuietCardLoss(blocker.id, `Caught bluffing ${pa.blockerRole} block`, 'RESOLVE_ACTION');
+        }
+        return;
+      }
+
+      // 6. QUIETLY RETURN LOST CARD TO BOTTOM OF DECK (NOT SHOWN TO OTHERS)
+      if (cmd.action === 'LOSE_CARD' && gameState.phase === 'AWAITING_LOSS') {
+        const currentLoss = gameState.lossQueue[0];
+        if (!currentLoss) return;
+        const loser = getPlayer(currentLoss.playerId);
+        const card = loser.cards[cmd.cardIndex];
+        if (!card || card.lost) return;
+
+        // Quietly place the lost card into the BOTTOM of the Court Deck without showing it to other players
+        putCardInBottom(card.role);
+        card.lost = true;
+        card.role = 'Hidden';
+
+        addLog(`📥 ${loser.name} quietly puts 1 card into the bottom of the Court Deck (${currentLoss.reason}).`, 'challenge');
+
+        const stillAlive = loser.cards.some(c => !c.lost);
+        if (!stillAlive) {
+          loser.alive = false;
+          gameState.treasury += loser.coins;
+          loser.coins = 0;
+          addLog(`⚰️ ${loser.name} has 0 cards remaining and is out of the game!`, 'challenge');
+        }
+
+        gameState.lossQueue.shift();
+
+        if (gameState.lossQueue.length > 0) {
+          syncStateToAll();
+        } else if (currentLoss.nextCallbackType === 'RESOLVE_ACTION') {
+          executeUnblockedAction();
+        } else {
+          advanceToNextTurn();
+        }
+        return;
+      }
+
+      // 7. AMBASSADOR EXCHANGE COMPLETION (RETURN UNCHOSEN TO BOTTOM OF DECK)
+      if (cmd.action === 'COMPLETE_EXCHANGE' && gameState.phase === 'AWAITING_EXCHANGE') {
+        const ex = gameState.exchangeData;
+        if (!ex || (senderId !== ex.playerId && gameMode !== 'local')) return;
+
+        const chosenIndices = cmd.chosenIndices || [];
+        if (chosenIndices.length !== ex.keepCount) return;
+
+        const player = getPlayer(ex.playerId);
+        const keptRoles = chosenIndices.map(idx => ex.options[idx]);
+        const returnedRoles = ex.options.filter((_, idx) => !chosenIndices.includes(idx));
+
+        let kIdx = 0;
+        player.cards.forEach(c => {
+          if (!c.lost) {
+            c.role = keptRoles[kIdx++];
+          }
+        });
+
+        // Quietly place returned cards into the BOTTOM of the Court Deck
+        returnedRoles.forEach(r => putCardInBottom(r));
+
+        addLog(`🟢 ${player.name} kept ${ex.keepCount} card(s) and quietly put ${returnedRoles.length} card(s) into the bottom of the Court Deck.`);
+        advanceToNextTurn();
+      }
+    }
+
+    // Queues a player to quietly return 1 card to the bottom of the deck
+    function queueQuietCardLoss(playerId, reason, nextCallbackType) {
+      const player = getPlayer(playerId);
+      if (!player || !player.alive) {
+        if (nextCallbackType === 'RESOLVE_ACTION') executeUnblockedAction();
+        else advanceToNextTurn();
+        return;
+      }
+
+      const activeIndices = [];
+      player.cards.forEach((c, idx) => {
+        if (!c.lost) activeIndices.push(idx);
+      });
+
+      // If player only has 1 card left, quietly put it into the bottom of the deck automatically
+      if (activeIndices.length === 1) {
+        const idx = activeIndices[0];
+        putCardInBottom(player.cards[idx].role);
+        player.cards[idx].lost = true;
+        player.cards[idx].role = 'Hidden';
+        player.alive = false;
+        gameState.treasury += player.coins;
+        player.coins = 0;
+        addLog(`📥 ${player.name} quietly puts their last card into the bottom of the Court Deck (${reason}) and is eliminated!`, 'challenge');
+
+        if (nextCallbackType === 'RESOLVE_ACTION') executeUnblockedAction();
+        else advanceToNextTurn();
+        return;
+      }
+
+      gameState.phase = 'AWAITING_LOSS';
+      gameState.lossQueue.push({ playerId, reason, nextCallbackType });
+      if (gameMode === 'local') {
+        myPlayerId = playerId;
+        document.getElementById('perspectiveSelect').value = myPlayerId;
+      }
+      syncStateToAll();
+    }
+
+    function executeUnblockedAction() {
+      const pa = gameState.pendingAction;
+      if (!pa) return advanceToNextTurn();
+
+      const actor = getPlayer(pa.actorId);
+      const target = pa.targetId ? getPlayer(pa.targetId) : null;
+
+      if (pa.type === 'FOREIGN_AID') {
+        actor.coins += 2;
+        gameState.treasury = Math.max(0, gameState.treasury - 2);
+        addLog(`💰 ${actor.name} takes Foreign Aid (+2 Coins).`);
+        advanceToNextTurn();
+      } else if (pa.type === 'TAX') {
+        actor.coins += 3;
+        gameState.treasury = Math.max(0, gameState.treasury - 3);
+        addLog(`🟣 ${actor.name} collects Duke's Tax (+3 Coins).`);
+        advanceToNextTurn();
+      } else if (pa.type === 'STEAL') {
+        if (target && target.alive) {
+          const stolen = Math.min(2, target.coins);
+          target.coins -= stolen;
+          actor.coins += stolen;
+          addLog(`🔵 ${actor.name} steals ${stolen} Coin(s) from ${target.name}!`);
+        }
+        advanceToNextTurn();
+      } else if (pa.type === 'ASSASSINATE') {
+        if (target && target.alive) {
+          addLog(`🗡️ ${actor.name}'s Assassination hits ${target.name}!`, 'challenge');
+          queueQuietCardLoss(target.id, `Assassinated by ${actor.name}`, 'NEXT_TURN');
+        } else {
+          advanceToNextTurn();
+        }
+      } else if (pa.type === 'EXCHANGE') {
+        const liveRoles = actor.cards.filter(c => !c.lost).map(c => c.role);
+        // Draw 2 cards from the TOP of the Court Deck
+        const drawn = [drawCardFromTop(), drawCardFromTop()].filter(Boolean);
+        gameState.phase = 'AWAITING_EXCHANGE';
+        gameState.exchangeData = {
+          playerId: actor.id,
+          options: [...liveRoles, ...drawn],
+          keepCount: liveRoles.length
+        };
+        if (gameMode === 'local') {
+          myPlayerId = actor.id;
+          document.getElementById('perspectiveSelect').value = myPlayerId;
+        }
+        syncStateToAll();
+      }
+    }
+
+    /*************************************************************************
+     * 5. UI RENDERING
+     *************************************************************************/
+    let pendingMoveWaitingTarget = null;
+    let selectedExchangeIndices = [];
+
+    function renderGameScreen() {
+      document.getElementById('treasuryCoinsText').textContent = gameState.treasury;
+      document.getElementById('courtDeckCountText').textContent = gameState.deck.length;
+
+      const activePlayer = getActivePlayer();
+      const me = getPlayer(myPlayerId) || gameState.players[0];
+
+      document.getElementById('turnStatusHeader').textContent =
+        gameState.phase === 'GAME_OVER'
+          ? '🏆 Game Over'
+          : `${activePlayer.name}'s Turn`;
+
+      renderProofBanner();
+      renderPhaseBanner(me);
+      renderSeatsGrid(me);
+      renderCommandDeck(me, activePlayer);
+      renderLogs();
+
+      if (gameState.phase === 'AWAITING_EXCHANGE' && gameState.exchangeData && gameState.exchangeData.playerId === me.id) {
+        openAmbassadorModal();
+      } else {
+        closeModal('exchangeModal');
+      }
+    }
+
+    function renderProofBanner() {
+      const banner = document.getElementById('proofBanner');
+      if (!gameState.proofReveal) {
+        banner.style.display = 'none';
+        return;
+      }
+      const pr = gameState.proofReveal;
+      banner.style.display = 'flex';
+      const img = document.getElementById('proofCardImg');
+      img.src = getCardImageSrc(pr.role);
+      img.onerror = function () { handleImageFallback(this, pr.role); };
+      document.getElementById('proofBannerTitle').textContent = `✅ NO BLUFF! ${pr.playerName} Revealed ${pr.role.toUpperCase()}!`;
+      document.getElementById('proofBannerSub').textContent = pr.detail;
+    }
+
+    function dismissProofBanner() {
+      sendCommand({ action: 'DISMISS_PROOF' });
+    }
+
+    function renderPhaseBanner(me) {
+      const banner = document.getElementById('phaseBanner');
+      const title = document.getElementById('phaseBannerTitle');
+      const sub = document.getElementById('phaseBannerSub');
+      const btns = document.getElementById('phaseBannerButtons');
+      btns.innerHTML = '';
+
+      const pa = gameState.pendingAction;
+
+      if (gameState.phase === 'AWAITING_ACTION_RESPONSE' && pa) {
+        banner.style.display = 'flex';
+        const actor = getPlayer(pa.actorId);
+        const target = pa.targetId ? getPlayer(pa.targetId) : null;
+        title.textContent = `🚨 ${actor.name} claims [${pa.claimedRole}] for ${pa.type}${target ? ' on ' + target.name : ''}!`;
+        sub.textContent = `Players at the table may Challenge Bluff, Block, or Allow (${pa.passedIds.length}/${gameState.players.filter(p => p.alive).length} allowed)`;
+
+        if (me.alive && me.id !== actor.id) {
+          const chalBtn = document.createElement('button');
+          chalBtn.className = 'btn btn-crimson';
+          chalBtn.textContent = `🔥 Call Bluff (Challenge ${pa.claimedRole})`;
+          chalBtn.onclick = () => sendCommand({ action: 'CHALLENGE_ACTION', actingPlayerId: me.id });
+          btns.appendChild(chalBtn);
+
+          if (pa.type === 'ASSASSINATE' && me.id === pa.targetId) {
+            const bBtn = document.createElement('button');
+            bBtn.className = 'btn btn-gold';
+            bBtn.textContent = `🛡️ Block with Contessa`;
+            bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: 'Contessa', actingPlayerId: me.id });
+            btns.appendChild(bBtn);
+          }
+
+          if (pa.type === 'STEAL' && me.id === pa.targetId) {
+            ['Captain', 'Ambassador'].forEach(r => {
+              const bBtn = document.createElement('button');
+              bBtn.className = 'btn btn-gold';
+              bBtn.textContent = `🛡️ Block with ${r}`;
+              bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: r, actingPlayerId: me.id });
+              btns.appendChild(bBtn);
+            });
+          }
+
+          const alreadyPassed = pa.passedIds.includes(me.id);
+          const passBtn = document.createElement('button');
+          passBtn.className = 'btn btn-emerald';
+          passBtn.disabled = alreadyPassed;
+          passBtn.textContent = alreadyPassed ? '✓ Allowed' : '👍 Allow / Pass';
+          passBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', actingPlayerId: me.id });
+          btns.appendChild(passBtn);
+        }
+
+        if (isHost || gameMode === 'local') {
+          const forceBtn = document.createElement('button');
+          forceBtn.className = 'btn';
+          forceBtn.textContent = '⏩ Table Agreed (Resolve Now)';
+          forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
+          btns.appendChild(forceBtn);
+        }
+        return;
+      }
+
+      if (gameState.phase === 'AWAITING_BLOCK_ONLY' && pa) {
+        banner.style.display = 'flex';
+        const actor = getPlayer(pa.actorId);
+        title.textContent = `💰 ${actor.name} is taking Foreign Aid (+2 Coins).`;
+        sub.textContent = `Anyone may claim DUKE to block, or Allow.`;
+
+        if (me.alive && me.id !== actor.id) {
+          const bBtn = document.createElement('button');
+          bBtn.className = 'btn btn-gold';
+          bBtn.textContent = `🟣 Claim Duke to Block`;
+          bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: 'Duke', actingPlayerId: me.id });
+          btns.appendChild(bBtn);
+
+          const alreadyPassed = pa.passedIds.includes(me.id);
+          const passBtn = document.createElement('button');
+          passBtn.className = 'btn btn-emerald';
+          passBtn.disabled = alreadyPassed;
+          passBtn.textContent = alreadyPassed ? '✓ Allowed' : '👍 Allow';
+          passBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', actingPlayerId: me.id });
+          btns.appendChild(passBtn);
+        }
+
+        if (isHost || gameMode === 'local') {
+          const forceBtn = document.createElement('button');
+          forceBtn.className = 'btn';
+          forceBtn.textContent = '⏩ Table Agreed (Resolve Now)';
+          forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
+          btns.appendChild(forceBtn);
+        }
+        return;
+      }
+
+      if (gameState.phase === 'AWAITING_BLOCK_RESPONSE' && pa) {
+        banner.style.display = 'flex';
+        const blocker = getPlayer(pa.blockerId);
+        title.textContent = `🛡️ ${blocker.name} claims [${pa.blockerRole}] to BLOCK!`;
+        sub.textContent = `Challenge ${blocker.name}'s ${pa.blockerRole} or Accept the Block.`;
+
+        if (me.alive && me.id !== blocker.id) {
+          const chalBtn = document.createElement('button');
+          chalBtn.className = 'btn btn-crimson';
+          chalBtn.textContent = `🔥 Call Bluff (Challenge ${pa.blockerRole})`;
+          chalBtn.onclick = () => sendCommand({ action: 'CHALLENGE_BLOCK', actingPlayerId: me.id });
+          btns.appendChild(chalBtn);
+
+          const alreadyPassed = pa.passedIds.includes(me.id);
+          const passBtn = document.createElement('button');
+          passBtn.className = 'btn btn-emerald';
+          passBtn.disabled = alreadyPassed;
+          passBtn.textContent = alreadyPassed ? '✓ Accepted' : '👍 Accept Block';
+          passBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', actingPlayerId: me.id });
+          btns.appendChild(passBtn);
+        }
+
+        if (isHost || gameMode === 'local') {
+          const forceBtn = document.createElement('button');
+          forceBtn.className = 'btn';
+          forceBtn.textContent = '⏩ Accept Block Now';
+          forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
+          btns.appendChild(forceBtn);
+        }
+        return;
+      }
+
+      if (gameState.phase === 'AWAITING_LOSS' && gameState.lossQueue.length > 0) {
+        banner.style.display = 'flex';
+        const currentLoss = gameState.lossQueue[0];
+        const loser = getPlayer(currentLoss.playerId);
+        title.textContent = `📥 ${loser.name} must quietly put 1 card into the bottom of the Court Deck!`;
+        sub.textContent = loser.id === me.id
+          ? `Tap one of your cards below to quietly return it to the bottom of the deck (others will NOT see what card you put back).`
+          : `Waiting for ${loser.name} to quietly return 1 card to the bottom of the deck...`;
+        return;
+      }
+
+      if (gameState.phase === 'GAME_OVER') {
+        banner.style.display = 'flex';
+        const winner = gameState.players.find(p => p.alive);
+        title.textContent = `👑 ${winner ? winner.name : 'Player'} Wins the Game!`;
+        sub.textContent = `All other players have returned their cards to the deck.`;
+        if (isHost || gameMode === 'local') {
+          const againBtn = document.createElement('button');
+          againBtn.className = 'btn btn-gold';
+          againBtn.textContent = '🔄 Deal New Game (0 Coins)';
+          againBtn.onclick = () => startGame();
+          btns.appendChild(againBtn);
+        }
+        return;
+      }
+
+      banner.style.display = 'none';
+    }
+
+    function renderSeatsGrid(me) {
+      const grid = document.getElementById('seatsGrid');
+      grid.innerHTML = '';
+
+      const currentLoss = gameState.phase === 'AWAITING_LOSS' ? gameState.lossQueue[0] : null;
+
+      // Sort so "YOU" appear first on your own phone screen for easy tabletop viewing
+      const orderedPlayers = [...gameState.players].sort((a, b) => (a.id === me.id ? -1 : b.id === me.id ? 1 : 0));
+
+      orderedPlayers.forEach(p => {
+        const realIdx = gameState.players.findIndex(x => x.id === p.id);
+        const isTurn = realIdx === gameState.turnIndex && gameState.phase !== 'GAME_OVER';
+        const isMe = p.id === me.id;
+        const pod = document.createElement('div');
+        pod.className = `player-pod ${isTurn ? 'active-turn' : ''} ${isMe ? 'is-me' : ''} ${!p.alive ? 'eliminated' : ''}`;
+
+        let cardsHtml = '';
+        p.cards.forEach((card, cIdx) => {
+          if (card.lost) {
+            // Card was quietly returned to bottom of deck (never shown to anyone)
+            cardsHtml += `
               <div class="influence-card returned-slot">
                 <div style="font-size:1.4rem; opacity:0.5; margin-bottom:0.25rem;">📥</div>
                 <div style="font-size:0.75rem; font-weight:700; color:#9ca3af;">LOST CARD</div>
                 <div style="font-size:0.65rem; color:#6b7280; margin-top:0.15rem;">Quietly returned to bottom of deck</div>
               </div>
             `;
-                                return;
-                              }
+            return;
+          }
 
-                              const mustPickToLose = currentLoss && currentLoss.playerId === p.id && isMe && !card.lost;
-                              const canSeeRole = isMe && (!hideMyCards || mustPickToLose);
-                              const displayRole = canSeeRole && card.role !== 'Hidden' ? card.role : 'Hidden';
-                              const roleMeta = ROLES[displayRole];
+          const mustPickToLose = currentLoss && currentLoss.playerId === p.id && isMe && !card.lost;
+          const canSeeRole = isMe && (!hideMyCards || mustPickToLose);
+          const displayRole = canSeeRole && card.role !== 'Hidden' ? card.role : 'Hidden';
+          const roleMeta = ROLES[displayRole];
 
-                              cardsHtml += `
+          cardsHtml += `
             <div class="influence-card ${mustPickToLose ? 'selectable' : ''}"
                  onclick="${mustPickToLose ? `selectCardToLose(${cIdx})` : ''}">
               <img class="card-art" src="${getCardImageSrc(displayRole)}" alt="${displayRole}" onerror="handleImageFallback(this, '${displayRole}')" />
@@ -2320,9 +2299,9 @@
               </div>
             </div>
           `;
-                            });
+        });
 
-                            pod.innerHTML = `
+        pod.innerHTML = `
           <div class="pod-header">
             <div class="player-name">
               <span>${escapeHtml(p.name)}</span>
@@ -2336,168 +2315,168 @@
           </div>
           <div class="cards-row">${cardsHtml}</div>
         `;
-                            grid.appendChild(pod);
-                          });
-                        }
+        grid.appendChild(pod);
+      });
+    }
 
-                        function selectCardToLose(cardIndex) {
-                          sendCommand({ action: 'LOSE_CARD', cardIndex });
-                        }
+    function selectCardToLose(cardIndex) {
+      sendCommand({ action: 'LOSE_CARD', cardIndex });
+    }
 
-                        function renderCommandDeck(me, activePlayer) {
-                          const isMyTurn = me.id === activePlayer.id && gameState.phase === 'TURN_DECISION' && me.alive;
-                          const mustCoup = me.coins >= 10;
-                          document.getElementById('mandatoryCoupWarning').style.display = (isMyTurn && mustCoup) ? 'inline' : 'none';
+    function renderCommandDeck(me, activePlayer) {
+      const isMyTurn = me.id === activePlayer.id && gameState.phase === 'TURN_DECISION' && me.alive;
+      const mustCoup = me.coins >= 10;
+      document.getElementById('mandatoryCoupWarning').style.display = (isMyTurn && mustCoup) ? 'inline' : 'none';
 
-                          const myLiveRoles = me.cards.filter(c => !c.lost).map(c => c.role);
+      const myLiveRoles = me.cards.filter(c => !c.lost).map(c => c.role);
 
-                          const generalActions = [
-                            {
-                              id: 'INCOME',
-                              title: '🪙 Income (+1 Coin)',
-                              desc: 'Take 1 coin from Treasury. Cannot be blocked.',
-                              disabled: !isMyTurn || mustCoup,
-                              needsTarget: false
-                            },
-                            {
-                              id: 'FOREIGN_AID',
-                              title: '💰 Foreign Aid (+2 Coins)',
-                              desc: 'Take 2 coins. Blockable by Duke.',
-                              disabled: !isMyTurn || mustCoup,
-                              needsTarget: false
-                            },
-                            {
-                              id: 'COUP',
-                              title: '💥 Launch Coup (-7 Coins)',
-                              desc: 'Target player quietly loses 1 card to deck.',
-                              disabled: !isMyTurn || me.coins < 7,
-                              needsTarget: true
-                            }
-                          ];
+      const generalActions = [
+        {
+          id: 'INCOME',
+          title: '🪙 Income (+1 Coin)',
+          desc: 'Take 1 coin from Treasury. Cannot be blocked.',
+          disabled: !isMyTurn || mustCoup,
+          needsTarget: false
+        },
+        {
+          id: 'FOREIGN_AID',
+          title: '💰 Foreign Aid (+2 Coins)',
+          desc: 'Take 2 coins. Blockable by Duke.',
+          disabled: !isMyTurn || mustCoup,
+          needsTarget: false
+        },
+        {
+          id: 'COUP',
+          title: '💥 Launch Coup (-7 Coins)',
+          desc: 'Target player quietly loses 1 card to deck.',
+          disabled: !isMyTurn || me.coins < 7,
+          needsTarget: true
+        }
+      ];
 
-                          const charActions = [
-                            {
-                              id: 'TAX',
-                              role: 'Duke',
-                              title: '🟣 Duke — Tax (+3 Coins)',
-                              desc: 'Take 3 coins from the Treasury.',
-                              disabled: !isMyTurn || mustCoup,
-                              needsTarget: false
-                            },
-                            {
-                              id: 'ASSASSINATE',
-                              role: 'Assassin',
-                              title: '🔴 Assassin — Assassinate (-3)',
-                              desc: 'Pay 3 coins. Target loses 1 card to deck.',
-                              disabled: !isMyTurn || mustCoup || me.coins < 3,
-                              needsTarget: true
-                            },
-                            {
-                              id: 'STEAL',
-                              role: 'Captain',
-                              title: '🔵 Captain — Steal (+2 Coins)',
-                              desc: 'Steal up to 2 coins from a target player.',
-                              disabled: !isMyTurn || mustCoup,
-                              needsTarget: true
-                            },
-                            {
-                              id: 'EXCHANGE',
-                              role: 'Ambassador',
-                              title: '🟢 Ambassador — Exchange',
-                              desc: 'Draw 2 from Deck Top, return 2 to Bottom.',
-                              disabled: !isMyTurn || mustCoup,
-                              needsTarget: false
-                            }
-                          ];
+      const charActions = [
+        {
+          id: 'TAX',
+          role: 'Duke',
+          title: '🟣 Duke — Tax (+3 Coins)',
+          desc: 'Take 3 coins from the Treasury.',
+          disabled: !isMyTurn || mustCoup,
+          needsTarget: false
+        },
+        {
+          id: 'ASSASSINATE',
+          role: 'Assassin',
+          title: '🔴 Assassin — Assassinate (-3)',
+          desc: 'Pay 3 coins. Target loses 1 card to deck.',
+          disabled: !isMyTurn || mustCoup || me.coins < 3,
+          needsTarget: true
+        },
+        {
+          id: 'STEAL',
+          role: 'Captain',
+          title: '🔵 Captain — Steal (+2 Coins)',
+          desc: 'Steal up to 2 coins from a target player.',
+          disabled: !isMyTurn || mustCoup,
+          needsTarget: true
+        },
+        {
+          id: 'EXCHANGE',
+          role: 'Ambassador',
+          title: '🟢 Ambassador — Exchange',
+          desc: 'Draw 2 from Deck Top, return 2 to Bottom.',
+          disabled: !isMyTurn || mustCoup,
+          needsTarget: false
+        }
+      ];
 
-                          const genGrid = document.getElementById('generalActionsGrid');
-                          genGrid.innerHTML = '';
-                          generalActions.forEach(a => {
-                            const btn = document.createElement('button');
-                            btn.className = 'action-btn';
-                            btn.disabled = a.disabled;
-                            btn.onclick = () => triggerTurnMove(a.id, a.needsTarget);
-                            btn.innerHTML = `
+      const genGrid = document.getElementById('generalActionsGrid');
+      genGrid.innerHTML = '';
+      generalActions.forEach(a => {
+        const btn = document.createElement('button');
+        btn.className = 'action-btn';
+        btn.disabled = a.disabled;
+        btn.onclick = () => triggerTurnMove(a.id, a.needsTarget);
+        btn.innerHTML = `
           <div class="action-btn-header"><span>${a.title}</span></div>
           <div class="action-btn-desc">${a.desc}</div>
         `;
-                            genGrid.appendChild(btn);
-                          });
+        genGrid.appendChild(btn);
+      });
 
-                          const charGrid = document.getElementById('characterActionsGrid');
-                          charGrid.innerHTML = '';
-                          charActions.forEach(a => {
-                            const holdsCard = myLiveRoles.includes(a.role);
-                            const btn = document.createElement('button');
-                            btn.className = 'action-btn';
-                            btn.disabled = a.disabled;
-                            btn.onclick = () => triggerTurnMove(a.id, a.needsTarget);
-                            btn.innerHTML = `
+      const charGrid = document.getElementById('characterActionsGrid');
+      charGrid.innerHTML = '';
+      charActions.forEach(a => {
+        const holdsCard = myLiveRoles.includes(a.role);
+        const btn = document.createElement('button');
+        btn.className = 'action-btn';
+        btn.disabled = a.disabled;
+        btn.onclick = () => triggerTurnMove(a.id, a.needsTarget);
+        btn.innerHTML = `
           <div class="action-btn-header">
             <span>${a.title}</span>
             ${!hideMyCards ? `<span class="bluff-pill ${holdsCard ? 'pill-truth' : 'pill-bluff'}">${holdsCard ? '✓ Have' : '🎭 Bluff'}</span>` : ''}
           </div>
           <div class="action-btn-desc">${a.desc}</div>
         `;
-                            charGrid.appendChild(btn);
-                          });
-                        }
+        charGrid.appendChild(btn);
+      });
+    }
 
-                        function triggerTurnMove(moveType, needsTarget) {
-                          if (!needsTarget) {
-                            sendCommand({ action: 'DECLARE_ACTION', moveType, targetId: null });
-                            return;
-                          }
+    function triggerTurnMove(moveType, needsTarget) {
+      if (!needsTarget) {
+        sendCommand({ action: 'DECLARE_ACTION', moveType, targetId: null });
+        return;
+      }
 
-                          pendingMoveWaitingTarget = moveType;
-                          const list = document.getElementById('targetPlayersList');
-                          list.innerHTML = '';
-                          const activePlayer = getActivePlayer();
+      pendingMoveWaitingTarget = moveType;
+      const list = document.getElementById('targetPlayersList');
+      list.innerHTML = '';
+      const activePlayer = getActivePlayer();
 
-                          gameState.players.forEach(p => {
-                            if (!p.alive || p.id === activePlayer.id) return;
-                            const btn = document.createElement('button');
-                            btn.className = 'btn';
-                            btn.style.width = '100%';
-                            btn.style.justifyContent = 'space-between';
-                            btn.style.padding = '0.75rem 1rem';
-                            btn.innerHTML = `
+      gameState.players.forEach(p => {
+        if (!p.alive || p.id === activePlayer.id) return;
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.style.width = '100%';
+        btn.style.justifyContent = 'space-between';
+        btn.style.padding = '0.75rem 1rem';
+        btn.innerHTML = `
           <span><strong>${escapeHtml(p.name)}</strong> (${p.cards.filter(c => !c.lost).length} cards)</span>
           <span>🪙 ${p.coins} Coins</span>
         `;
-                            btn.onclick = () => {
-                              sendCommand({ action: 'DECLARE_ACTION', moveType: pendingMoveWaitingTarget, targetId: p.id });
-                              closeModal('targetModal');
-                            };
-                            list.appendChild(btn);
-                          });
+        btn.onclick = () => {
+          sendCommand({ action: 'DECLARE_ACTION', moveType: pendingMoveWaitingTarget, targetId: p.id });
+          closeModal('targetModal');
+        };
+        list.appendChild(btn);
+      });
 
-                          openModal('targetModal');
-                        }
+      openModal('targetModal');
+    }
 
-                        function openAmbassadorModal() {
-                          const ex = gameState.exchangeData;
-                          if (!ex) return;
-                          const modal = document.getElementById('exchangeModal');
-                          if (modal.classList.contains('open')) return;
+    function openAmbassadorModal() {
+      const ex = gameState.exchangeData;
+      if (!ex) return;
+      const modal = document.getElementById('exchangeModal');
+      if (modal.classList.contains('open')) return;
 
-                          const instruction = document.getElementById('exchangeInstructionText');
-                          const container = document.getElementById('exchangeCardsContainer');
-                          const confirmBtn = document.getElementById('confirmExchangeBtn');
+      const instruction = document.getElementById('exchangeInstructionText');
+      const container = document.getElementById('exchangeCardsContainer');
+      const confirmBtn = document.getElementById('confirmExchangeBtn');
 
-                          instruction.textContent = `Select exactly ${ex.keepCount} card(s) to keep. Unchosen card(s) will be quietly returned to the bottom of the Court Deck.`;
-                          container.innerHTML = '';
-                          selectedExchangeIndices = [];
-                          confirmBtn.disabled = true;
+      instruction.textContent = `Select exactly ${ex.keepCount} card(s) to keep. Unchosen card(s) will be quietly returned to the bottom of the Court Deck.`;
+      container.innerHTML = '';
+      selectedExchangeIndices = [];
+      confirmBtn.disabled = true;
 
-                          ex.options.forEach((role, idx) => {
-                            const cardDiv = document.createElement('div');
-                            cardDiv.className = 'influence-card selectable';
-                            cardDiv.style.cursor = 'pointer';
-                            cardDiv.style.borderWidth = '3px';
-                            const roleMeta = ROLES[role] || ROLES.Hidden;
+      ex.options.forEach((role, idx) => {
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'influence-card selectable';
+        cardDiv.style.cursor = 'pointer';
+        cardDiv.style.borderWidth = '3px';
+        const roleMeta = ROLES[role] || ROLES.Hidden;
 
-                            cardDiv.innerHTML = `
+        cardDiv.innerHTML = `
           <img class="card-art" src="${getCardImageSrc(role)}" alt="${role}" onerror="handleImageFallback(this, '${role}')" />
           <div class="card-label-bar">
             <div class="card-role-name" style="color:${roleMeta.color};">${role.toUpperCase()}</div>
@@ -2505,57 +2484,57 @@
           </div>
         `;
 
-                            cardDiv.onclick = () => {
-                              const pos = selectedExchangeIndices.indexOf(idx);
-                              if (pos !== -1) {
-                                selectedExchangeIndices.splice(pos, 1);
-                                cardDiv.style.borderColor = 'rgba(255, 255, 255, 0.18)';
-                                cardDiv.querySelector('.status-text').textContent = 'Tap to select';
-                              } else {
-                                if (selectedExchangeIndices.length >= ex.keepCount) {
-                                  const firstIdx = selectedExchangeIndices.shift();
-                                  const firstEl = container.children[firstIdx];
-                                  if (firstEl) {
-                                    firstEl.style.borderColor = 'rgba(255, 255, 255, 0.18)';
-                                    firstEl.querySelector('.status-text').textContent = 'Tap to select';
-                                  }
-                                }
-                                selectedExchangeIndices.push(idx);
-                                cardDiv.style.borderColor = '#10b981';
-                                cardDiv.querySelector('.status-text').textContent = '✓ KEEPING';
-                              }
-                              confirmBtn.disabled = selectedExchangeIndices.length !== ex.keepCount;
-                            };
+        cardDiv.onclick = () => {
+          const pos = selectedExchangeIndices.indexOf(idx);
+          if (pos !== -1) {
+            selectedExchangeIndices.splice(pos, 1);
+            cardDiv.style.borderColor = 'rgba(255, 255, 255, 0.18)';
+            cardDiv.querySelector('.status-text').textContent = 'Tap to select';
+          } else {
+            if (selectedExchangeIndices.length >= ex.keepCount) {
+              const firstIdx = selectedExchangeIndices.shift();
+              const firstEl = container.children[firstIdx];
+              if (firstEl) {
+                firstEl.style.borderColor = 'rgba(255, 255, 255, 0.18)';
+                firstEl.querySelector('.status-text').textContent = 'Tap to select';
+              }
+            }
+            selectedExchangeIndices.push(idx);
+            cardDiv.style.borderColor = '#10b981';
+            cardDiv.querySelector('.status-text').textContent = '✓ KEEPING';
+          }
+          confirmBtn.disabled = selectedExchangeIndices.length !== ex.keepCount;
+        };
 
-                            container.appendChild(cardDiv);
-                          });
+        container.appendChild(cardDiv);
+      });
 
-                          openModal('exchangeModal');
-                        }
+      openModal('exchangeModal');
+    }
 
-                        function submitAmbassadorExchange() {
-                          const ex = gameState.exchangeData;
-                          if (!ex || selectedExchangeIndices.length !== ex.keepCount) return;
-                          sendCommand({ action: 'COMPLETE_EXCHANGE', chosenIndices: selectedExchangeIndices });
-                          closeModal('exchangeModal');
-                        }
+    function submitAmbassadorExchange() {
+      const ex = gameState.exchangeData;
+      if (!ex || selectedExchangeIndices.length !== ex.keepCount) return;
+      sendCommand({ action: 'COMPLETE_EXCHANGE', chosenIndices: selectedExchangeIndices });
+      closeModal('exchangeModal');
+    }
 
-                        function openModal(modalId) {
-                          const modal = document.getElementById(modalId);
-                          if (modal) modal.classList.add('open');
-                        }
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('open');
+    }
 
-                        function closeModal(modalId) {
-                          const modal = document.getElementById(modalId);
-                          if (modal) modal.classList.remove('open');
-                        }
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.remove('open');
+    }
 
     function renderLogs() {
       const container = document.getElementById('gameLogContainer');
       container.innerHTML = '';
       gameState.logs.forEach(log => {
         const el = document.createElement('div');
-        el.className = 'log-entry ' + (log.type || '');
+        el.className = `log-entry ${log.type || ''}`;
         el.textContent = log.text;
         container.appendChild(el);
       });
@@ -2563,8 +2542,6 @@
 
     function resetToLobby() {
       if (confirm('Are you sure you want to leave the table and return to the lobby?')) {
-        if (joinRetryInterval) clearInterval(joinRetryInterval);
-        if (joinTimeoutTimer) clearTimeout(joinTimeoutTimer);
         if (mqttClient) {
           try { mqttClient.disconnect(); } catch (e) { }
           mqttClient = null;
@@ -2596,16 +2573,16 @@
       const code = document.getElementById('roomCodeText').textContent;
       if (!code || code === '------') return;
       navigator.clipboard.writeText(code).then(() => {
-        alert('Room Code ' + code + ' copied to clipboard!');
+        alert(`Room Code ${code} copied to clipboard!`);
       });
     }
 
     function copyTableLink() {
       const code = document.getElementById('roomCodeText').textContent;
       if (!code || code === '------') return;
-      const url = window.location.origin + window.location.pathname + '?join=' + code;
+      const url = `${window.location.origin}${window.location.pathname}?join=${code}`;
       navigator.clipboard.writeText(url).then(() => {
-        alert('Table link copied to clipboard!\n' + url);
+        alert(`Table link copied to clipboard!\n${url}`);
       });
     }
 
@@ -2617,11 +2594,9 @@
       const params = new URLSearchParams(window.location.search);
       const urlCode = (params.get('join') || window.location.hash.replace('#', '')).trim();
       if (urlCode && /^\d{4}$/.test(urlCode)) {
-        const input = document.getElementById('joinCodeInput');
-        if (input) input.value = urlCode;
+        document.getElementById('joinCodeInput').value = urlCode;
         selectLobbyTab('online');
-        const statusEl = document.getElementById('networkStatusText');
-        if (statusEl) statusEl.textContent = 'Table ' + urlCode + ' detected from link! Enter your name and tap Join Table.';
+        document.getElementById('networkStatusText').textContent = `Table ${urlCode} detected from link! Enter your name and tap Join Table.`;
       }
     });
   </script>
