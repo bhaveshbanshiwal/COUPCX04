@@ -1956,19 +1956,16 @@
           advanceToNextTurn();
         }
       } else if (pa.type === 'EXCHANGE') {
-        const liveRoles = actor.cards.filter(c => !c.lost).map(c => c.role);
-        const drawn = [drawCardFromTop(), drawCardFromTop()].filter(Boolean);
-        gameState.phase = 'AWAITING_EXCHANGE';
-        gameState.exchangeData = {
-          playerId: actor.id,
-          options: [...liveRoles, ...drawn],
-          keepCount: liveRoles.length
-        };
-        if (gameMode === 'local') {
-          myPlayerId = actor.id;
-          document.getElementById('perspectiveSelect').value = myPlayerId;
-        }
-        syncStateToAll();
+        const oldRoles = [];
+        actor.cards.forEach(c => {
+          if (!c.lost) {
+            oldRoles.push(c.role);
+            c.role = drawCardFromTop();
+          }
+        });
+        oldRoles.forEach(r => putCardInBottom(r));
+        addLog(`🟢 ${actor.name} swapped their card(s) with the top of the Court Deck and placed the old ones on the bottom.`);
+        advanceToNextTurn();
       }
     }
 
