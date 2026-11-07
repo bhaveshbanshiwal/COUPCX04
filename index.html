@@ -1148,12 +1148,15 @@
         const seat = document.createElement('div');
         seat.className = 'lobby-seat' + (p ? ' occupied' : '');
         const isMe = p && p.id === myPlayerId;
+        const canRemove = p && (gameMode === 'local' || (isHost && !isMe));
+
         seat.innerHTML = `
           <div class="seat-num">${i + 1}</div>
-          <div style="font-size:0.78rem; font-weight:${p ? '600' : '400'}; color:${p ? '#fff' : '#6b7280'}; display:flex; align-items:center; gap:0.3rem;">
-            <span>${p ? escapeHtml(p.name) : 'Open'}</span>
+          <div style="font-size:0.78rem; font-weight:${p ? '600' : '400'}; color:${p ? '#fff' : '#6b7280'}; display:flex; align-items:center; gap:0.3rem; flex:1; min-width:0;">
+            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p ? escapeHtml(p.name) : 'Open'}</span>
             ${isMe ? '<span style="font-size:0.55rem; background:#3b82f6; color:#fff; padding:0.08rem 0.28rem; border-radius:2px; font-weight:700;">YOU</span>' : ''}
           </div>
+          ${canRemove ? `<button onclick="removeLobbyPlayer('${p.id}')" title="Remove Player" style="background:rgba(225,29,72,0.2); border:1px solid #f43f5e; color:#fda4af; border-radius:3px; width:20px; height:20px; font-size:0.65rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;">✕</button>` : ''}
         `;
         container.appendChild(seat);
       }
@@ -1162,6 +1165,25 @@
       const startBtn = document.getElementById('startGameBtn');
       startBtn.disabled = !canStart;
       startBtn.textContent = (!isHost && gameMode === 'online') ? '⏳ Waiting for Host...' : '🎴 Deal & Start';
+    }
+
+    function removeLobbyPlayer(playerId) {
+      if (!isHost && gameMode !== 'local') return;
+      lobbyPlayers = lobbyPlayers.filter(p => p.id !== playerId);
+
+      if (gameMode === 'local' && lobbyPlayers.length > 0) {
+        myPlayerId = lobbyPlayers[0].id;
+      }
+
+      renderLobbySeats();
+
+      if (gameMode === 'online' && isHost) {
+        broadcastLobbyState();
+        mqttPublish(`coup_v2/${currentRoomCode}/reply/${playerId}`, {
+          type: 'JOIN_REJECTED',
+          reason: 'Removed from the table by the Host.'
+        });
+      }
     }
 
     function addLocalPlayer() {
