@@ -393,7 +393,7 @@
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
     }
 
-    /* PLAYERS GRID */
+    /* GAME LAYOUT (Compact Players + Actions) */
     .game-layout {
       display: grid;
       grid-template-columns: 1fr 320px;
@@ -406,50 +406,26 @@
       }
     }
 
-    .seats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(265px, 1fr));
-      gap: 0.95rem;
-      margin-bottom: 1.15rem;
-    }
-
-    .player-pod {
-      background: var(--bg-panel);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 0.95rem;
-      position: relative;
+    /* COMPACT PLAYER LIST UI */
+    .mini-pod {
+      background: #171e2e;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 0.6rem 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
       transition: all 0.2s ease;
     }
 
-    .player-pod.active-turn {
-      border: 2px solid var(--accent-gold);
-      box-shadow: 0 0 20px rgba(245, 158, 11, 0.22);
+    .mini-pod.active-turn {
+      border-color: var(--accent-gold);
+      background: rgba(245, 158, 11, 0.12);
     }
 
-    .player-pod.is-me {
-      background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, rgba(18, 22, 33, 0.95) 100%);
-    }
-
-    .player-pod.eliminated {
+    .mini-pod.eliminated {
       opacity: 0.42;
       filter: grayscale(0.85);
-    }
-
-    .pod-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.7rem;
-    }
-
-    .player-name {
-      font-weight: 700;
-      font-size: 0.96rem;
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      flex-wrap: wrap;
     }
 
     .badge {
@@ -470,21 +446,7 @@
       color: #fff;
     }
 
-    .player-coins {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 700;
-      font-size: 1.05rem;
-      color: #fde047;
-      background: rgba(250, 204, 21, 0.1);
-      padding: 0.2rem 0.55rem;
-      border-radius: 8px;
-      border: 1px solid rgba(250, 204, 21, 0.3);
-    }
-
-    /* INFLUENCE CARDS WITH ROUNDED CORNERS */
+    /* INFLUENCE CARDS */
     .cards-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -769,11 +731,6 @@
           onchange="switchLocalPerspective(this.value)"></select>
       </div>
 
-      <!-- Tabletop Screen Privacy Shield -->
-      <button id="peekToggleBtn" class="btn" style="display:none;" onclick="toggleCardPrivacy()">
-        🙈 Hide My Cards
-      </button>
-
       <button class="btn btn-gold" onclick="openModal('rulesModal')">📜 Rules</button>
       <button id="leaveBtn" class="btn btn-crimson" style="display:none;" onclick="resetToLobby()">🚪 Leave</button>
     </div>
@@ -882,7 +839,7 @@
         <div class="court-stat">
           <div style="font-size:1.45rem;">🎴</div>
           <div>
-            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Ordered Court Deck (FIFO)
+            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Court Deck (FIFO)
             </div>
             <div style="font-weight:700; font-size:0.95rem;">
               <span id="courtDeckCountText">15</span> Cards <span
@@ -899,7 +856,7 @@
         </div>
       </div>
 
-      <!-- No-Bluff Proof Reveal Banner (Only shown when a challenged player proves they HAVE the card!) -->
+      <!-- No-Bluff Proof Reveal Banner -->
       <div id="proofBanner" class="proof-banner" style="display:none;">
         <div style="display:flex; align-items:center; gap:0.9rem;">
           <img id="proofCardImg" class="proof-card-thumb" src="" alt="Revealed Card" />
@@ -919,17 +876,27 @@
       </div>
 
       <div class="game-layout">
-        <!-- LEFT COLUMN: PLAYERS + ACTIONS -->
+        <!-- LEFT COLUMN: MAIN ACTION SCREEN -->
         <div>
-          <!-- 2 to 6 Players Grid -->
-          <div id="seatsGrid" class="seats-grid"></div>
+          <!-- Compact Player List (Coins & Card Counts Only) -->
+          <div id="compactSeatsGrid" style="display:flex; flex-wrap:wrap; gap:0.55rem; margin-bottom:1.15rem;"></div>
+
+          <!-- Big Visual Button for My Cards -->
+          <button id="bigPeekBtn" class="btn"
+            style="width:100%; padding:1rem; font-size:1.15rem; font-weight:700; justify-content:center; margin-bottom:0.75rem; border-width:2px;"
+            onclick="toggleCardPrivacy()">
+            🙈 SECRET CARDS HIDDEN (TAP TO PEEK)
+          </button>
+
+          <!-- My Dedicated Card Area (Collapsible) -->
+          <div id="myCardsArea" class="cards-row" style="display:none; margin-bottom:1.25rem;"></div>
 
           <!-- Turn Actions Panel -->
           <div class="command-panel">
             <div
               style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.7rem; flex-wrap:wrap; gap:0.5rem;">
               <h3 style="font-family:'Cinzel',serif; font-size:1rem; color:#fbbf24;">
-                ⚡ Turn Actions & Character Abilities
+                ⚡ Turn Actions & Character Claims
               </h3>
               <span id="mandatoryCoupWarning" style="display:none; color:#fb7185; font-size:0.78rem; font-weight:700;">
                 ⚠️ 10+ Coins: You MUST launch a Coup!
@@ -961,8 +928,7 @@
               </div>
               <div><strong style="color:#60a5fa;">🔵 Captain:</strong> Steal (+2 Coins) • Blocked by Captain/Ambassador
               </div>
-              <div><strong style="color:#34d399;">🟢 Ambassador:</strong> Draw 2 from Top, Return 2 to Bottom • Blocks
-                Steal</div>
+              <div><strong style="color:#34d399;">🟢 Ambassador:</strong> Exchange (Top 2 / Bot 2) • Blocks Steal</div>
               <div><strong style="color:#f472b6;">🩷 Contessa:</strong> Blocks Assassination</div>
             </div>
           </div>
@@ -1142,7 +1108,7 @@
     let gameMode = 'online'; // 'online' | 'local'
     let isHost = false;
     let myPlayerId = 'p_host';
-    let hideMyCards = false; // Tabletop anti-peek toggle
+    let hideMyCards = true; // DEFAULT TRUE: Cards stay hidden for pure tabletop mode
 
     let lobbyPlayers = [];
     let gameState = {
@@ -1159,7 +1125,6 @@
       logs: []
     };
 
-    // INSTANT REAL-TIME BROKER MESSAGING (ZERO-NAT / 4G / 5G / WI-FI)
     const MQTT_BROKERS = [
       { host: 'broker.hivemq.com', port: 8884, path: '/mqtt' },
       { host: 'broker.emqx.io', port: 8084, path: '/mqtt' }
@@ -1170,8 +1135,6 @@
 
     function toggleCardPrivacy() {
       hideMyCards = !hideMyCards;
-      const btn = document.getElementById('peekToggleBtn');
-      btn.textContent = hideMyCards ? '👁️ Peek My Cards' : '🙈 Hide My Cards';
       renderGameScreen();
     }
 
@@ -1399,7 +1362,6 @@
         (client) => {
           let isSeated = false;
 
-          // Subscribe to lobby updates, individual game state, and direct replies
           client.subscribe(`coup_v2/${code}/lobby`);
           client.subscribe(`coup_v2/${code}/reply/${myPlayerId}`);
           client.subscribe(`coup_v2/${code}/state/${myPlayerId}`);
@@ -1429,7 +1391,6 @@
             }
           };
 
-          // Send join request immediately with fast retries
           function sendJoin() {
             if (!isSeated) {
               document.getElementById('networkStatusText').textContent = `🤝 Seating at Table ${code}...`;
@@ -1513,17 +1474,15 @@
       document.getElementById('lobbyScreen').style.display = 'none';
       document.getElementById('gameScreen').style.display = 'block';
       document.getElementById('leaveBtn').style.display = 'inline-flex';
-      document.getElementById('peekToggleBtn').style.display = 'inline-flex';
     }
 
     /*************************************************************************
      * 3. ORDERED FIFO COURT DECK & 0-COIN START ENGINE
      *************************************************************************/
-    // Shuffled ONLY once at initial deal; afterwards strictly Draw from TOP (shift), Return to BOTTOM (push)
     function createInitialCourtDeck() {
       const deck = [];
       ['Duke', 'Assassin', 'Captain', 'Ambassador', 'Contessa'].forEach(role => {
-        for (let i = 0; i < 3; i++) deck.push(role); // 15 actual cards total
+        for (let i = 0; i < 3; i++) deck.push(role);
       });
       for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -1533,12 +1492,12 @@
     }
 
     function drawCardFromTop() {
-      return gameState.deck.shift(); // TOP of deck
+      return gameState.deck.shift();
     }
 
     function putCardInBottom(role) {
       if (role && role !== 'Hidden') {
-        gameState.deck.push(role); // BOTTOM of deck (no reshuffle)
+        gameState.deck.push(role);
       }
     }
 
@@ -1546,12 +1505,12 @@
       if (lobbyPlayers.length < 2) return alert('At least 2 players are needed!');
 
       const deck = createInitialCourtDeck();
+      hideMyCards = true; // Auto-hide cards for tabletop mode when game starts
 
-      // Deal 2 cards from TOP of deck to each player, and start everyone at 0 Coins!
       const players = lobbyPlayers.map(lp => ({
         id: lp.id,
         name: lp.name,
-        coins: 0, // 0 starting coins regardless of player count (2–6)
+        coins: 0,
         alive: true,
         cards: [
           { role: deck.shift(), lost: false },
@@ -1571,7 +1530,7 @@
         exchangeData: null,
         proofReveal: null,
         logs: [{
-          text: `🎴 Game started with ${players.length} players! Every player starts with 0 Coins and 2 cards dealt from the top of the 15-card Court Deck.`,
+          text: `🎴 Game started! Every player gets 0 Coins and 2 cards.`,
           type: 'win'
         }]
       };
@@ -1601,6 +1560,7 @@
 
     function switchLocalPerspective(playerId) {
       myPlayerId = playerId;
+      hideMyCards = true; // hide when swapping perspectives
       renderGameScreen();
     }
 
@@ -1642,6 +1602,7 @@
       if (gameMode === 'local') {
         myPlayerId = gameState.players[nextIdx].id;
         document.getElementById('perspectiveSelect').value = myPlayerId;
+        hideMyCards = true;
       }
 
       syncStateToAll();
@@ -1663,7 +1624,6 @@
       if (cmd.action === 'DECLARE_ACTION' && gameState.phase === 'TURN_DECISION') {
         if (senderId !== actor.id && gameMode !== 'local') return;
 
-        // Clear any old proof banner on new turn action
         gameState.proofReveal = null;
 
         const { moveType, targetId } = cmd;
@@ -1813,10 +1773,6 @@
         const matchingCardIndex = claimer.cards.findIndex(c => !c.lost && c.role === pa.claimedRole);
 
         if (matchingCardIndex !== -1) {
-          // NO BLUFF! The card IS right:
-          // 1) Show the card to all players on the table
-          // 2) Put the shown card into the BOTTOM of the Court Deck
-          // 3) Draw a new replacement card from the TOP of the Court Deck
           const provenRole = claimer.cards[matchingCardIndex].role;
           putCardInBottom(provenRole);
           claimer.cards[matchingCardIndex].role = drawCardFromTop();
@@ -1830,8 +1786,6 @@
           addLog(`✅ NO BLUFF! ${claimer.name} shows [${provenRole}] to the table, puts it at the bottom of the deck, and draws a new card from the top! ${challenger.name} must quietly return 1 card to the deck.`, 'win');
           queueQuietCardLoss(challenger.id, `Lost challenge against ${claimer.name}'s ${provenRole}`, 'RESOLVE_ACTION');
         } else {
-          // BLUFF CAUGHT!
-          // Card is NOT shown to others; claimer quietly puts 1 of their cards into the bottom of the deck!
           if (pa.type === 'ASSASSINATE' && pa.costPaid > 0) {
             claimer.coins += pa.costPaid;
             gameState.treasury = Math.max(0, gameState.treasury - pa.costPaid);
@@ -1875,7 +1829,6 @@
         const matchingCardIndex = blocker.cards.findIndex(c => !c.lost && c.role === pa.blockerRole);
 
         if (matchingCardIndex !== -1) {
-          // NO BLUFF on Block! Show card to table, put at BOTTOM of deck, draw new from TOP of deck
           const provenRole = blocker.cards[matchingCardIndex].role;
           putCardInBottom(provenRole);
           blocker.cards[matchingCardIndex].role = drawCardFromTop();
@@ -1889,14 +1842,13 @@
           addLog(`✅ NO BLUFF! ${blocker.name} shows [${provenRole}] to the table, puts it at the bottom of the deck, and draws a new card from the top! Block succeeds & ${challenger.name} loses 1 card.`, 'win');
           queueQuietCardLoss(challenger.id, `Lost challenge against ${blocker.name}'s ${provenRole} block`, 'NEXT_TURN');
         } else {
-          // BLUFF on Block! Blocker quietly puts 1 card into the bottom of the deck, and action proceeds!
           addLog(`❌ BLOCK BLUFF! ${blocker.name} does not have ${pa.blockerRole}. ${blocker.name} must quietly put 1 card into the bottom of the deck, and the ${pa.type} goes through!`, 'challenge');
           queueQuietCardLoss(blocker.id, `Caught bluffing ${pa.blockerRole} block`, 'RESOLVE_ACTION');
         }
         return;
       }
 
-      // 6. QUIETLY RETURN LOST CARD TO BOTTOM OF DECK (NOT SHOWN TO OTHERS)
+      // 6. QUIETLY RETURN LOST CARD TO BOTTOM OF DECK
       if (cmd.action === 'LOSE_CARD' && gameState.phase === 'AWAITING_LOSS') {
         const currentLoss = gameState.lossQueue[0];
         if (!currentLoss) return;
@@ -1904,7 +1856,6 @@
         const card = loser.cards[cmd.cardIndex];
         if (!card || card.lost) return;
 
-        // Quietly place the lost card into the BOTTOM of the Court Deck without showing it to other players
         putCardInBottom(card.role);
         card.lost = true;
         card.role = 'Hidden';
@@ -1931,7 +1882,7 @@
         return;
       }
 
-      // 7. AMBASSADOR EXCHANGE COMPLETION (RETURN UNCHOSEN TO BOTTOM OF DECK)
+      // 7. AMBASSADOR EXCHANGE COMPLETION
       if (cmd.action === 'COMPLETE_EXCHANGE' && gameState.phase === 'AWAITING_EXCHANGE') {
         const ex = gameState.exchangeData;
         if (!ex || (senderId !== ex.playerId && gameMode !== 'local')) return;
@@ -1950,7 +1901,6 @@
           }
         });
 
-        // Quietly place returned cards into the BOTTOM of the Court Deck
         returnedRoles.forEach(r => putCardInBottom(r));
 
         addLog(`🟢 ${player.name} kept ${ex.keepCount} card(s) and quietly put ${returnedRoles.length} card(s) into the bottom of the Court Deck.`);
@@ -1958,7 +1908,6 @@
       }
     }
 
-    // Queues a player to quietly return 1 card to the bottom of the deck
     function queueQuietCardLoss(playerId, reason, nextCallbackType) {
       const player = getPlayer(playerId);
       if (!player || !player.alive) {
@@ -1972,7 +1921,6 @@
         if (!c.lost) activeIndices.push(idx);
       });
 
-      // If player only has 1 card left, quietly put it into the bottom of the deck automatically
       if (activeIndices.length === 1) {
         const idx = activeIndices[0];
         putCardInBottom(player.cards[idx].role);
@@ -2031,7 +1979,6 @@
         }
       } else if (pa.type === 'EXCHANGE') {
         const liveRoles = actor.cards.filter(c => !c.lost).map(c => c.role);
-        // Draw 2 cards from the TOP of the Court Deck
         const drawn = [drawCardFromTop(), drawCardFromTop()].filter(Boolean);
         gameState.phase = 'AWAITING_EXCHANGE';
         gameState.exchangeData = {
@@ -2048,7 +1995,7 @@
     }
 
     /*************************************************************************
-     * 5. UI RENDERING
+     * 5. UI RENDERING (NEW COMPACT UI FOR MAINS SCREEN)
      *************************************************************************/
     let pendingMoveWaitingTarget = null;
     let selectedExchangeIndices = [];
@@ -2065,9 +2012,32 @@
           ? '🏆 Game Over'
           : `${activePlayer.name}'s Turn`;
 
+      // Check if we MUST force open cards (e.g. forced to lose a card)
+      const currentLoss = gameState.phase === 'AWAITING_LOSS' ? gameState.lossQueue[0] : null;
+      const mustPickToLose = currentLoss && currentLoss.playerId === me.id;
+      if (mustPickToLose) {
+        hideMyCards = false; // Force open so they can click one
+      }
+
+      // Update Big Peek Button
+      const peekBtn = document.getElementById('bigPeekBtn');
+      peekBtn.innerHTML = hideMyCards ? '🙈 SECRET CARDS HIDDEN (TAP TO PEEK)' : '👀 HIDE MY CARDS';
+      peekBtn.style.borderColor = hideMyCards ? '#3b82f6' : '#f59e0b';
+      peekBtn.style.background = hideMyCards ? '#1e293b' : 'rgba(245, 158, 11, 0.15)';
+      peekBtn.style.color = hideMyCards ? '#fff' : '#fbbf24';
+
+      // Update My Cards Area Visibility
+      const myCardsArea = document.getElementById('myCardsArea');
+      if (hideMyCards) {
+        myCardsArea.style.display = 'none';
+      } else {
+        myCardsArea.style.display = 'grid';
+        renderMyCards(me, mustPickToLose);
+      }
+
       renderProofBanner();
       renderPhaseBanner(me);
-      renderSeatsGrid(me);
+      renderCompactPlayers(me, activePlayer);
       renderCommandDeck(me, activePlayer);
       renderLogs();
 
@@ -2076,6 +2046,74 @@
       } else {
         closeModal('exchangeModal');
       }
+    }
+
+    function renderCompactPlayers(me, activePlayer) {
+      const grid = document.getElementById('compactSeatsGrid');
+      grid.innerHTML = '';
+
+      const orderedPlayers = [...gameState.players].sort((a, b) => (a.id === me.id ? -1 : b.id === me.id ? 1 : 0));
+
+      orderedPlayers.forEach(p => {
+        const isTurn = p.id === activePlayer.id && gameState.phase !== 'GAME_OVER';
+        const isMe = p.id === me.id;
+        const activeCards = p.cards.filter(c => !c.lost).length;
+
+        const el = document.createElement('div');
+        el.style.flex = "1 1 calc(33% - 0.5rem)";
+        el.style.minWidth = "130px";
+        el.className = `mini-pod ${isTurn ? 'active-turn' : ''} ${!p.alive ? 'eliminated' : ''}`;
+
+        el.innerHTML = `
+          <div style="display:flex; align-items:center; gap:0.3rem;">
+            <span style="font-weight:700; font-size:0.86rem; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:85px;">${escapeHtml(p.name)}</span>
+            ${isMe ? '<span class="badge badge-you" style="font-size:0.5rem; padding:0.1rem 0.25rem;">YOU</span>' : ''}
+            ${isTurn ? '<span class="badge badge-turn" style="font-size:0.5rem; padding:0.1rem 0.25rem;">TURN</span>' : ''}
+          </div>
+          <div style="font-size:0.8rem; color:#9ca3af; margin-top:0.15rem; font-family:'JetBrains Mono', monospace;">
+             🎴 ${activeCards} &nbsp;|&nbsp; 🪙 <strong style="color:#fde047; font-size:1.05rem;">${p.coins}</strong>
+          </div>
+        `;
+        grid.appendChild(el);
+      });
+    }
+
+    function renderMyCards(me, mustPickToLose) {
+      const area = document.getElementById('myCardsArea');
+      area.innerHTML = '';
+
+      me.cards.forEach((card, cIdx) => {
+        if (card.lost) {
+          area.innerHTML += `
+             <div class="influence-card returned-slot">
+               <div style="font-size:1.4rem; opacity:0.5; margin-bottom:0.25rem;">📥</div>
+               <div style="font-size:0.75rem; font-weight:700; color:#9ca3af;">LOST CARD</div>
+               <div style="font-size:0.65rem; color:#6b7280; margin-top:0.15rem;">Returned to Deck</div>
+             </div>
+           `;
+          return;
+        }
+
+        const roleMeta = ROLES[card.role];
+        area.innerHTML += `
+           <div class="influence-card ${mustPickToLose ? 'selectable' : ''}"
+                onclick="${mustPickToLose ? `selectCardToLose(${cIdx})` : ''}">
+             <img class="card-art" src="${getCardImageSrc(card.role)}" alt="${card.role}" onerror="handleImageFallback(this, '${card.role}')" />
+             <div class="card-label-bar">
+               <div class="card-role-name" style="color:${roleMeta ? roleMeta.color : '#cbd5e1'};">
+                 ${card.role.toUpperCase()}
+               </div>
+               <div class="card-role-sub">
+                 ${mustPickToLose ? '⬇️ Tap to Put in Deck Bottom' : 'Your Secret Card'}
+               </div>
+             </div>
+           </div>
+        `;
+      });
+    }
+
+    function selectCardToLose(cardIndex) {
+      sendCommand({ action: 'LOSE_CARD', cardIndex });
     }
 
     function renderProofBanner() {
@@ -2248,79 +2286,6 @@
       }
 
       banner.style.display = 'none';
-    }
-
-    function renderSeatsGrid(me) {
-      const grid = document.getElementById('seatsGrid');
-      grid.innerHTML = '';
-
-      const currentLoss = gameState.phase === 'AWAITING_LOSS' ? gameState.lossQueue[0] : null;
-
-      // Sort so "YOU" appear first on your own phone screen for easy tabletop viewing
-      const orderedPlayers = [...gameState.players].sort((a, b) => (a.id === me.id ? -1 : b.id === me.id ? 1 : 0));
-
-      orderedPlayers.forEach(p => {
-        const realIdx = gameState.players.findIndex(x => x.id === p.id);
-        const isTurn = realIdx === gameState.turnIndex && gameState.phase !== 'GAME_OVER';
-        const isMe = p.id === me.id;
-        const pod = document.createElement('div');
-        pod.className = `player-pod ${isTurn ? 'active-turn' : ''} ${isMe ? 'is-me' : ''} ${!p.alive ? 'eliminated' : ''}`;
-
-        let cardsHtml = '';
-        p.cards.forEach((card, cIdx) => {
-          if (card.lost) {
-            // Card was quietly returned to bottom of deck (never shown to anyone)
-            cardsHtml += `
-              <div class="influence-card returned-slot">
-                <div style="font-size:1.4rem; opacity:0.5; margin-bottom:0.25rem;">📥</div>
-                <div style="font-size:0.75rem; font-weight:700; color:#9ca3af;">LOST CARD</div>
-                <div style="font-size:0.65rem; color:#6b7280; margin-top:0.15rem;">Quietly returned to bottom of deck</div>
-              </div>
-            `;
-            return;
-          }
-
-          const mustPickToLose = currentLoss && currentLoss.playerId === p.id && isMe && !card.lost;
-          const canSeeRole = isMe && (!hideMyCards || mustPickToLose);
-          const displayRole = canSeeRole && card.role !== 'Hidden' ? card.role : 'Hidden';
-          const roleMeta = ROLES[displayRole];
-
-          cardsHtml += `
-            <div class="influence-card ${mustPickToLose ? 'selectable' : ''}"
-                 onclick="${mustPickToLose ? `selectCardToLose(${cIdx})` : ''}">
-              <img class="card-art" src="${getCardImageSrc(displayRole)}" alt="${displayRole}" onerror="handleImageFallback(this, '${displayRole}')" />
-              <div class="card-label-bar">
-                <div class="card-role-name" style="color:${roleMeta ? roleMeta.color : '#cbd5e1'};">
-                  ${displayRole === 'Hidden' ? (isMe && hideMyCards ? 'HIDDEN (TAP PEEK)' : 'FACE-DOWN CARD') : displayRole.toUpperCase()}
-                </div>
-                <div class="card-role-sub">
-                  ${mustPickToLose ? '⬇️ Tap to Put in Deck Bottom' : (isMe ? 'Your Secret Card' : 'Active Influence')}
-                </div>
-              </div>
-            </div>
-          `;
-        });
-
-        pod.innerHTML = `
-          <div class="pod-header">
-            <div class="player-name">
-              <span>${escapeHtml(p.name)}</span>
-              ${isMe ? '<span class="badge badge-you">YOU</span>' : ''}
-              ${isTurn ? '<span class="badge badge-turn">TURN</span>' : ''}
-            </div>
-            <div class="player-coins">
-              <span>🪙</span>
-              <span>${p.coins}</span>
-            </div>
-          </div>
-          <div class="cards-row">${cardsHtml}</div>
-        `;
-        grid.appendChild(pod);
-      });
-    }
-
-    function selectCardToLose(cardIndex) {
-      sendCommand({ action: 'LOSE_CARD', cardIndex });
     }
 
     function renderCommandDeck(me, activePlayer) {
@@ -2551,7 +2516,6 @@
         document.getElementById('gameScreen').style.display = 'none';
         document.getElementById('lobbyScreen').style.display = 'block';
         document.getElementById('leaveBtn').style.display = 'none';
-        document.getElementById('peekToggleBtn').style.display = 'none';
         document.getElementById('localPerspectiveBar').style.display = 'none';
         document.getElementById('roomCodeDisplay').style.display = 'none';
         document.getElementById('networkStatusText').textContent = '';
@@ -2590,7 +2554,6 @@
     window.addEventListener('DOMContentLoaded', () => {
       renderLobbySeats();
 
-      // Auto-populate 4-digit join code from URL parameter (?join=1234) or hash (#1234)
       const params = new URLSearchParams(window.location.search);
       const urlCode = (params.get('join') || window.location.hash.replace('#', '')).trim();
       if (urlCode && /^\d{4}$/.test(urlCode)) {
