@@ -31,7 +31,8 @@
       --accent-gold: #f59e0b;
       --accent-crimson: #e11d48;
       --accent-emerald: #10b981;
-      --card-radius: 18px;
+      --sq-radius: 4px;
+      --card-radius: 6px;
     }
 
     * {
@@ -45,76 +46,79 @@
       background: radial-gradient(circle at 50% 0%, #1c192b 0%, var(--bg-deep) 75%);
       color: var(--text-main);
       font-family: 'Inter', sans-serif;
-      min-height: 100vh;
+      height: 100dvh;
+      max-height: 100dvh;
       display: flex;
       flex-direction: column;
-      overflow-x: hidden;
+      overflow: hidden;
     }
 
-    /* HEADER */
+    body.lobby-mode {
+      overflow-y: auto;
+      height: auto;
+      min-height: 100dvh;
+    }
+
+    /* COMPACT HEADER */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 0.75rem 1.25rem;
-      background: rgba(9, 11, 16, 0.92);
+      padding: 0.35rem 0.65rem;
+      background: rgba(9, 11, 16, 0.96);
       border-bottom: 1px solid var(--border-subtle);
-      backdrop-filter: blur(10px);
-      position: sticky;
-      top: 0;
       z-index: 50;
-      flex-wrap: wrap;
-      gap: 0.5rem;
+      flex-shrink: 0;
     }
 
     .brand-logo {
       font-family: 'Cinzel', serif;
-      font-size: 1.5rem;
+      font-size: 1.05rem;
       font-weight: 900;
-      letter-spacing: 0.16em;
+      letter-spacing: 0.12em;
       background: linear-gradient(135deg, #fff 0%, #f59e0b 55%, #b45309 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
     .brand-sub {
-      font-size: 0.68rem;
+      font-size: 0.56rem;
       color: var(--text-muted);
-      letter-spacing: 0.06em;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-      display: block;
+      margin-left: 0.4rem;
     }
 
     .nav-actions {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      flex-wrap: wrap;
+      gap: 0.35rem;
     }
 
-    /* BUTTONS */
+    /* SQUARISH BUTTONS */
     .btn {
-      padding: 0.55rem 0.95rem;
-      border-radius: 10px;
+      padding: 0.35rem 0.6rem;
+      border-radius: var(--sq-radius);
       font-weight: 600;
-      font-size: 0.84rem;
+      font-size: 0.72rem;
       cursor: pointer;
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.16);
       background: var(--bg-card);
       color: var(--text-main);
-      transition: all 0.16s ease;
+      transition: all 0.14s ease;
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
+      justify-content: center;
+      gap: 0.25rem;
+      white-space: nowrap;
     }
 
     .btn:hover:not(:disabled) {
       border-color: var(--border-gold);
-      transform: translateY(-1px);
     }
 
     .btn:disabled {
-      opacity: 0.38;
+      opacity: 0.35;
       cursor: not-allowed;
     }
 
@@ -138,32 +142,43 @@
 
     main {
       flex: 1;
-      max-width: 1280px;
+      max-width: 960px;
       width: 100%;
       margin: 0 auto;
-      padding: 1rem;
+      padding: 0.4rem 0.5rem;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    body.lobby-mode main {
+      overflow: visible;
+      padding: 0.75rem;
     }
 
     /* LOBBY */
     .lobby-grid {
       display: grid;
-      grid-template-columns: 300px 1fr;
-      gap: 1.25rem;
-      margin-top: 0.5rem;
+      grid-template-columns: 240px 1fr;
+      gap: 0.9rem;
     }
 
-    @media (max-width: 860px) {
+    @media (max-width: 760px) {
       .lobby-grid {
         grid-template-columns: 1fr;
+      }
+
+      .box-showcase {
+        display: none !important;
       }
     }
 
     .panel {
       background: rgba(18, 22, 33, 0.94);
       border: 1px solid var(--border-subtle);
-      border-radius: 16px;
-      padding: 1.25rem;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+      border-radius: var(--sq-radius);
+      padding: 0.85rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
     }
 
     .box-showcase {
@@ -171,16 +186,15 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 0.85rem;
+      gap: 0.65rem;
     }
 
     .box-cover-wrapper {
-      width: 210px;
-      height: 285px;
+      width: 170px;
+      height: 230px;
       border-radius: var(--card-radius);
       overflow: hidden;
       border: 2px solid var(--border-gold);
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.7);
       background: #1a1528;
     }
 
@@ -188,31 +202,29 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      border-radius: calc(var(--card-radius) - 2px);
     }
 
     .input-group {
-      margin-bottom: 0.9rem;
+      margin-bottom: 0.65rem;
     }
 
     .input-group label {
       display: block;
-      font-size: 0.76rem;
+      font-size: 0.7rem;
       font-weight: 600;
       color: var(--text-muted);
-      margin-bottom: 0.35rem;
+      margin-bottom: 0.25rem;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
 
     .input-field {
       width: 100%;
-      padding: 0.68rem 0.85rem;
+      padding: 0.5rem 0.7rem;
       background: #090b10;
       border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 10px;
+      border-radius: var(--sq-radius);
       color: #fff;
-      font-size: 0.95rem;
+      font-size: 0.85rem;
       font-family: inherit;
     }
 
@@ -223,20 +235,20 @@
 
     .mode-tabs {
       display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
+      gap: 0.4rem;
+      margin-bottom: 0.75rem;
     }
 
     .mode-tab {
       flex: 1;
-      padding: 0.65rem;
+      padding: 0.5rem;
       text-align: center;
       background: #090b10;
       border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
+      border-radius: var(--sq-radius);
       cursor: pointer;
       font-weight: 600;
-      font-size: 0.82rem;
+      font-size: 0.75rem;
     }
 
     .mode-tab.active {
@@ -247,32 +259,32 @@
 
     .room-badge {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 1.35rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: #fbbf24;
       background: rgba(245, 158, 11, 0.12);
       border: 1px dashed #fbbf24;
-      padding: 0.4rem 0.9rem;
-      border-radius: 10px;
-      letter-spacing: 0.16em;
+      padding: 0.25rem 0.65rem;
+      border-radius: var(--sq-radius);
+      letter-spacing: 0.14em;
       display: inline-block;
     }
 
     .lobby-players-list {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
-      gap: 0.65rem;
-      margin: 0.9rem 0;
+      grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
+      gap: 0.45rem;
+      margin: 0.65rem 0;
     }
 
     .lobby-seat {
       background: #090b10;
       border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 0.7rem;
+      border-radius: var(--sq-radius);
+      padding: 0.45rem 0.55rem;
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.45rem;
     }
 
     .lobby-seat.occupied {
@@ -281,164 +293,168 @@
     }
 
     .seat-num {
-      width: 26px;
-      height: 26px;
-      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      border-radius: var(--sq-radius);
       background: #1f2937;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 0.78rem;
+      font-size: 0.7rem;
       color: var(--accent-gold);
     }
 
-    /* GAME TABLE SCREEN */
+    /* ================= ACTIVE GAME SCREEN (ZERO-SCROLL MOBILE FIT) ================= */
     #gameScreen {
       display: none;
+      flex: 1;
+      flex-direction: column;
+      gap: 0.35rem;
+      overflow: hidden;
+      height: 100%;
     }
 
-    .court-bar {
+    /* RED TOP TURN BAR (COMPACT SPACE) */
+    .turn-top-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: linear-gradient(90deg, rgba(18, 22, 33, 0.96), rgba(30, 27, 46, 0.96), rgba(18, 22, 33, 0.96));
-      border: 1px solid var(--border-gold);
-      border-radius: 14px;
-      padding: 0.8rem 1.15rem;
-      margin-bottom: 1rem;
-      flex-wrap: wrap;
-      gap: 0.85rem;
+      background: linear-gradient(90deg, #7f1d1d 0%, #be123c 50%, #7f1d1d 100%);
+      border: 1px solid #fb7185;
+      border-radius: var(--sq-radius);
+      padding: 0.3rem 0.6rem;
+      flex-shrink: 0;
+      box-shadow: 0 2px 10px rgba(225, 29, 72, 0.35);
     }
 
-    .court-stat {
+    .turn-top-bar.my-turn-active {
+      background: linear-gradient(90deg, #991b1b 0%, #e11d48 50%, #991b1b 100%);
+      border-color: #fda4af;
+      box-shadow: 0 0 12px rgba(244, 63, 94, 0.65);
+    }
+
+    .turn-indicator-left {
       display: flex;
       align-items: center;
-      gap: 0.6rem;
+      gap: 0.4rem;
+      font-size: 0.76rem;
+      font-weight: 800;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .coin-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, #fde047, #ca8a04);
-      border: 2px solid #fef08a;
-      box-shadow: 0 0 10px rgba(234, 179, 8, 0.45);
-      display: inline-flex;
+    .turn-dot {
+      width: 8px;
+      height: 8px;
+      background: #fecdd3;
+      border-radius: 2px;
+      display: inline-block;
+      box-shadow: 0 0 6px #fff;
+      flex-shrink: 0;
+    }
+
+    .court-mini-stats {
+      display: flex;
       align-items: center;
-      justify-content: center;
-      font-weight: 900;
-      color: #422006;
-      font-size: 0.9rem;
+      gap: 0.55rem;
+      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: #ffe4e6;
+      flex-shrink: 0;
     }
 
     /* ALERT / CHALLENGE / BLOCK BANNER */
     .phase-banner {
-      background: rgba(225, 29, 72, 0.14);
-      border: 2px solid #f43f5e;
-      border-radius: 14px;
-      padding: 1rem 1.2rem;
-      margin-bottom: 1rem;
+      background: rgba(225, 29, 72, 0.18);
+      border: 1px solid #f43f5e;
+      border-radius: var(--sq-radius);
+      padding: 0.4rem 0.55rem;
       display: flex;
       flex-direction: column;
-      gap: 0.65rem;
-      animation: pulseBorder 2s infinite;
-    }
-
-    @keyframes pulseBorder {
-
-      0%,
-      100% {
-        box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.35);
-      }
-
-      50% {
-        box-shadow: 0 0 18px 2px rgba(244, 63, 94, 0.55);
-      }
+      gap: 0.3rem;
+      flex-shrink: 0;
     }
 
     .phase-title {
-      font-size: 1rem;
+      font-size: 0.74rem;
       font-weight: 700;
       color: #fda4af;
+      line-height: 1.2;
     }
 
     .response-controls {
       display: flex;
-      gap: 0.55rem;
+      gap: 0.35rem;
       flex-wrap: wrap;
       align-items: center;
     }
 
     /* NO-BLUFF CARD REVEAL BANNER */
     .proof-banner {
-      background: rgba(16, 185, 129, 0.14);
-      border: 2px solid #10b981;
-      border-radius: 16px;
-      padding: 1rem;
-      margin-bottom: 1rem;
+      background: rgba(16, 185, 129, 0.16);
+      border: 1px solid #10b981;
+      border-radius: var(--sq-radius);
+      padding: 0.35rem 0.55rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 1rem;
-      flex-wrap: wrap;
+      gap: 0.5rem;
+      flex-shrink: 0;
     }
 
     .proof-card-thumb {
-      width: 76px;
-      height: 106px;
-      border-radius: 12px;
+      width: 34px;
+      height: 46px;
+      border-radius: 3px;
       object-fit: cover;
-      border: 2px solid #34d399;
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+      border: 1px solid #34d399;
+      flex-shrink: 0;
     }
 
-    /* GAME LAYOUT (Compact Players + Actions) */
-    .game-layout {
+    /* COMPACT PLAYER PODS ROW */
+    #compactSeatsGrid {
       display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: 1.15rem;
+      grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+      gap: 0.3rem;
+      flex-shrink: 0;
     }
 
-    @media (max-width: 1024px) {
-      .game-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* COMPACT PLAYER LIST UI */
     .mini-pod {
-      background: #171e2e;
+      background: #151b29;
       border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px;
-      padding: 0.6rem 0.85rem;
+      border-radius: var(--sq-radius);
+      padding: 0.28rem 0.4rem;
       display: flex;
       flex-direction: column;
-      gap: 0.35rem;
-      transition: all 0.2s ease;
+      gap: 0.1rem;
     }
 
     .mini-pod.active-turn {
-      border-color: var(--accent-gold);
-      background: rgba(245, 158, 11, 0.12);
+      border-color: #f43f5e;
+      background: rgba(225, 29, 72, 0.16);
     }
 
     .mini-pod.eliminated {
-      opacity: 0.42;
+      opacity: 0.38;
       filter: grayscale(0.85);
     }
 
     .badge {
-      font-size: 0.65rem;
-      padding: 0.14rem 0.45rem;
-      border-radius: 6px;
+      font-size: 0.5rem;
+      padding: 0.08rem 0.25rem;
+      border-radius: 2px;
       text-transform: uppercase;
       font-weight: 700;
     }
 
     .badge-turn {
-      background: var(--accent-gold);
-      color: #000;
+      background: #e11d48;
+      color: #fff;
     }
 
     .badge-you {
@@ -446,45 +462,48 @@
       color: #fff;
     }
 
-    /* INFLUENCE CARDS */
+    /* PEEK BUTTON & INFLUENCE CARDS */
+    #bigPeekBtn {
+      width: 100%;
+      padding: 0.42rem;
+      font-size: 0.76rem;
+      font-weight: 700;
+      justify-content: center;
+      border-width: 1px;
+      flex-shrink: 0;
+    }
+
     .cards-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 0.7rem;
+      gap: 0.4rem;
+      flex-shrink: 0;
     }
 
     .influence-card {
       border-radius: var(--card-radius);
-      height: 185px;
-      border: 2px solid rgba(255, 255, 255, 0.18);
+      height: 88px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
       position: relative;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
       background: #10141f;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-      transition: transform 0.2s ease, border-color 0.2s ease;
     }
 
     .influence-card.selectable {
       cursor: pointer;
-      border-color: #f43f5e;
-      animation: pulseBorder 1.3s infinite;
-    }
-
-    .influence-card.selectable:hover {
-      transform: scale(1.03);
+      border: 2px solid #f43f5e;
     }
 
     .influence-card.returned-slot {
       background: rgba(9, 11, 16, 0.6);
-      border: 2px dashed rgba(255, 255, 255, 0.12);
-      box-shadow: none;
+      border: 1px dashed rgba(255, 255, 255, 0.14);
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 0.75rem;
+      padding: 0.25rem;
     }
 
     .card-art {
@@ -493,135 +512,163 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      border-radius: calc(var(--card-radius) - 2px);
       z-index: 1;
     }
 
     .card-label-bar {
       position: relative;
       z-index: 2;
-      background: linear-gradient(to top, rgba(7, 9, 14, 0.96) 25%, rgba(7, 9, 14, 0.68) 80%, transparent);
-      padding: 0.55rem 0.45rem 0.45rem;
+      background: linear-gradient(to top, rgba(7, 9, 14, 0.95) 30%, rgba(7, 9, 14, 0.7) 80%, transparent);
+      padding: 0.2rem 0.25rem;
       text-align: center;
-      border-bottom-left-radius: calc(var(--card-radius) - 2px);
-      border-bottom-right-radius: calc(var(--card-radius) - 2px);
     }
 
     .card-role-name {
       font-family: 'Cinzel', serif;
       font-weight: 700;
-      font-size: 0.84rem;
-      letter-spacing: 0.06em;
+      font-size: 0.68rem;
+      letter-spacing: 0.04em;
     }
 
     .card-role-sub {
-      font-size: 0.64rem;
+      font-size: 0.54rem;
       color: #cbd5e1;
     }
 
-    /* ACTION COMMAND DECK */
+    /* ACTION COMMAND DECK (SQUARISH & 1-LINE CHARACTER CLAIMS) */
     .command-panel {
       background: var(--bg-panel);
       border: 1px solid var(--border-subtle);
-      border-radius: 16px;
-      padding: 1.1rem;
+      border-radius: var(--sq-radius);
+      padding: 0.45rem;
+      flex-shrink: 0;
     }
 
     .action-category-title {
-      font-size: 0.73rem;
+      font-size: 0.58rem;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       color: var(--text-muted);
-      margin-bottom: 0.55rem;
+      margin-bottom: 0.25rem;
       font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    .actions-grid {
+    /* 3 General Actions in 1 Row */
+    .general-actions-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 0.6rem;
-      margin-bottom: 0.95rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.32rem;
+      margin-bottom: 0.4rem;
+    }
+
+    /* 4 Character Claims Strictly in 1 Line */
+    .char-actions-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.32rem;
     }
 
     .action-btn {
       background: #171e2e;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px;
-      padding: 0.7rem 0.85rem;
-      text-align: left;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--sq-radius);
+      padding: 0.42rem 0.25rem;
+      text-align: center;
       cursor: pointer;
       color: var(--text-main);
-      transition: all 0.15s ease;
+      transition: all 0.12s ease;
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      align-items: center;
+      justify-content: center;
+      gap: 0.12rem;
+      min-height: 52px;
+      position: relative;
+      overflow: hidden;
     }
 
     .action-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
       border-color: var(--accent-gold);
       background: #1e283c;
     }
 
     .action-btn:disabled {
-      opacity: 0.35;
+      opacity: 0.32;
       cursor: not-allowed;
     }
 
-    .action-btn-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+    .action-btn-title {
       font-weight: 700;
-      font-size: 0.88rem;
+      font-size: 0.7rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      line-height: 1.15;
     }
 
     .action-btn-desc {
-      font-size: 0.72rem;
+      font-size: 0.58rem;
       color: var(--text-muted);
-      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
 
     .bluff-pill {
-      font-size: 0.6rem;
-      padding: 0.12rem 0.4rem;
-      border-radius: 5px;
+      font-size: 0.48rem;
+      padding: 0.05rem 0.22rem;
+      border-radius: 2px;
       font-weight: 700;
       text-transform: uppercase;
+      line-height: 1;
     }
 
     .pill-truth {
-      background: rgba(16, 185, 129, 0.2);
+      background: rgba(16, 185, 129, 0.22);
       color: #34d399;
-      border: 1px solid rgba(16, 185, 129, 0.4);
+      border: 1px solid rgba(16, 185, 129, 0.45);
     }
 
     .pill-bluff {
-      background: rgba(244, 63, 94, 0.2);
+      background: rgba(244, 63, 94, 0.22);
       color: #fb7185;
-      border: 1px solid rgba(244, 63, 94, 0.4);
+      border: 1px solid rgba(244, 63, 94, 0.45);
     }
 
-    /* LOG BOX */
+    /* COMPACT BOTTOM LOG & CHEAT BAR */
+    .bottom-info-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      flex: 1;
+      min-height: 0;
+    }
+
     .log-box {
-      height: 320px;
+      flex: 1;
+      min-height: 44px;
       overflow-y: auto;
       background: #080a0f;
       border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      padding: 0.7rem;
-      font-size: 0.79rem;
+      border-radius: var(--sq-radius);
+      padding: 0.3rem 0.4rem;
+      font-size: 0.66rem;
       display: flex;
       flex-direction: column;
-      gap: 0.42rem;
+      gap: 0.2rem;
     }
 
     .log-entry {
-      padding: 0.4rem 0.55rem;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.03);
-      border-left: 3px solid #4b5563;
-      line-height: 1.35;
+      padding: 0.18rem 0.35rem;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.025);
+      border-left: 2px solid #4b5563;
+      line-height: 1.22;
     }
 
     .log-entry.claim {
@@ -643,17 +690,29 @@
       font-weight: 600;
     }
 
+    .micro-ref-bar {
+      font-size: 0.56rem;
+      color: #9ca3af;
+      background: rgba(18, 22, 33, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--sq-radius);
+      padding: 0.22rem 0.4rem;
+      white-space: nowrap;
+      overflow-x: auto;
+      flex-shrink: 0;
+    }
+
     /* MODALS */
     .modal-backdrop {
       position: fixed;
       inset: 0;
       background: rgba(5, 7, 11, 0.85);
-      backdrop-filter: blur(6px);
+      backdrop-filter: blur(5px);
       display: none;
       align-items: center;
       justify-content: center;
       z-index: 100;
-      padding: 1rem;
+      padding: 0.75rem;
     }
 
     .modal-backdrop.open {
@@ -663,13 +722,13 @@
     .modal-content {
       background: var(--bg-panel);
       border: 1px solid var(--border-gold);
-      border-radius: 18px;
-      max-width: 780px;
+      border-radius: var(--sq-radius);
+      max-width: 680px;
       width: 100%;
-      max-height: 90vh;
+      max-height: 90dvh;
       overflow-y: auto;
-      padding: 1.4rem;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+      padding: 0.9rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
     }
 
     .modal-header {
@@ -677,21 +736,21 @@
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding-bottom: 0.8rem;
-      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.65rem;
     }
 
     .rules-table {
       width: 100%;
       border-collapse: collapse;
-      margin: 0.85rem 0;
-      font-size: 0.82rem;
+      margin: 0.5rem 0;
+      font-size: 0.74rem;
     }
 
     .rules-table th,
     .rules-table td {
       border: 1px solid rgba(255, 255, 255, 0.12);
-      padding: 0.55rem;
+      padding: 0.35rem;
       text-align: left;
     }
 
@@ -703,31 +762,30 @@
     .perspective-switcher {
       background: rgba(59, 130, 246, 0.14);
       border: 1px solid #3b82f6;
-      padding: 0.4rem 0.75rem;
-      border-radius: 10px;
+      padding: 0.15rem 0.4rem;
+      border-radius: var(--sq-radius);
       display: flex;
       align-items: center;
-      gap: 0.45rem;
-      font-size: 0.78rem;
+      gap: 0.3rem;
+      font-size: 0.68rem;
     }
   </style>
 </head>
 
-<body>
+<body class="lobby-mode">
 
   <!-- TOP BAR -->
   <header>
-    <div>
+    <div style="display:flex; align-items:baseline;">
       <span class="brand-logo">COUP</span>
-      <span class="brand-sub">Tabletop Digital Companion • 2–6 Players</span>
+      <span class="brand-sub">2–6P Companion</span>
     </div>
 
     <div class="nav-actions">
       <!-- Local Pass & Play Perspective Switcher -->
       <div id="localPerspectiveBar" class="perspective-switcher" style="display:none;">
-        <span>👁️ Player:</span>
-        <select id="perspectiveSelect" class="input-field"
-          style="padding:0.2rem 0.45rem; width:auto; font-size:0.78rem;"
+        <span>👁️</span>
+        <select id="perspectiveSelect" class="input-field" style="padding:0.1rem 0.3rem; width:auto; font-size:0.68rem;"
           onchange="switchLocalPerspective(this.value)"></select>
       </div>
 
@@ -741,32 +799,26 @@
     <!-- ================= LOBBY SCREEN ================= -->
     <section id="lobbyScreen">
       <div class="lobby-grid">
-        <!-- Product Box Showcase (Wired to images/box.jpg with rounded corners) -->
         <div class="panel box-showcase">
           <div class="box-cover-wrapper">
             <img id="lobbyBoxImg" src="images/box.jpg" alt="Coup Box Cover"
               onerror="handleImageFallback(this, 'box')" />
           </div>
           <div>
-            <h3 style="font-family:'Cinzel',serif; color:#fbbf24; font-size:1rem;">Tabletop Mode (No Physical
-              Cards/Coins Needed)</h3>
-            <p style="font-size:0.78rem; color:var(--text-muted); margin-top:0.35rem; line-height:1.45;">
-              Sit around the table with your friends! Each player joins on their phone. Everyone starts with <strong>0
-                Coins</strong> and <strong>2 Cards</strong>. Deck order is strictly maintained (Top Draw ↑ / Bottom
-              Return ↓).
+            <h3 style="font-family:'Cinzel',serif; color:#fbbf24; font-size:0.9rem;">Tabletop Mode</h3>
+            <p style="font-size:0.72rem; color:var(--text-muted); margin-top:0.25rem; line-height:1.35;">
+              Each player joins on their phone. Start with <strong>0 Coins</strong> and <strong>2 Cards</strong>.
             </p>
           </div>
         </div>
 
-        <!-- Multiplayer Host / Join Panel -->
         <div class="panel">
-          <h2 style="font-family:'Cinzel',serif; margin-bottom:0.9rem; font-size:1.25rem;">Join Table (2 to 6 Players)
+          <h2 style="font-family:'Cinzel',serif; margin-bottom:0.65rem; font-size:1.05rem;">Join Table (2 to 6 Players)
           </h2>
 
           <div class="mode-tabs">
-            <div id="tabOnline" class="mode-tab active" onclick="selectLobbyTab('online')">📱 Multi-Phone P2P (Tabletop)
-            </div>
-            <div id="tabLocal" class="mode-tab" onclick="selectLobbyTab('local')">🛋️ Single-Device Pass & Play</div>
+            <div id="tabOnline" class="mode-tab active" onclick="selectLobbyTab('online')">📱 Multi-Phone P2P</div>
+            <div id="tabLocal" class="mode-tab" onclick="selectLobbyTab('local')">🛋️ Pass & Play</div>
           </div>
 
           <!-- ONLINE P2P CONTROLS -->
@@ -777,12 +829,12 @@
                 maxlength="18" />
             </div>
 
-            <div style="display:flex; gap:0.65rem; flex-wrap:wrap; margin-bottom:1.15rem;">
+            <div style="display:flex; gap:0.45rem; flex-wrap:wrap; margin-bottom:0.8rem;">
               <button class="btn btn-gold" onclick="hostOnlineRoom()">👑 Host Table</button>
-              <div style="display:flex; gap:0.4rem; flex:1; min-width:210px;">
-                <input type="text" id="joinCodeInput" class="input-field" placeholder="4-Digit Code (e.g. 1234)"
-                  maxlength="4" inputmode="numeric" pattern="[0-9]*"
-                  style="letter-spacing:0.18em; font-family:'JetBrains Mono', monospace; font-size:1.02rem; text-align:center; font-weight:700;" />
+              <div style="display:flex; gap:0.35rem; flex:1; min-width:190px;">
+                <input type="text" id="joinCodeInput" class="input-field" placeholder="4-Digit Code" maxlength="4"
+                  inputmode="numeric" pattern="[0-9]*"
+                  style="letter-spacing:0.15em; font-family:'JetBrains Mono', monospace; font-size:0.9rem; text-align:center; font-weight:700;" />
                 <button class="btn btn-emerald" onclick="joinOnlineRoom()">Join Table</button>
               </div>
             </div>
@@ -790,35 +842,34 @@
 
           <!-- SINGLE-DEVICE TEST CONTROLS -->
           <div id="localControls" style="display:none;">
-            <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
-              <input type="text" id="localPlayerNameInput" class="input-field" style="flex:1; min-width:160px;"
+            <div style="display:flex; gap:0.4rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+              <input type="text" id="localPlayerNameInput" class="input-field" style="flex:1; min-width:140px;"
                 placeholder="Player name..." maxlength="18" />
-              <button class="btn btn-emerald" onclick="addLocalPlayer()">+ Add Player</button>
-              <button class="btn" onclick="fillDemoPlayers()">⚡ Demo 4 Players</button>
+              <button class="btn btn-emerald" onclick="addLocalPlayer()">+ Add</button>
+              <button class="btn" onclick="fillDemoPlayers()">⚡ Demo 4P</button>
             </div>
           </div>
 
           <!-- WAITING ROOM SEATS -->
-          <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:1rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+          <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:0.75rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem;">
               <div>
-                <span style="font-size:0.76rem; color:var(--text-muted); text-transform:uppercase;">Seated Players
-                  (<span id="seatCountText">0</span>/6):</span>
-                <div id="roomCodeDisplay" style="display:none; margin-top:0.35rem;">
-                  <span style="font-size:0.8rem; color:var(--text-muted);">Table Code: </span>
+                <span style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Seated (<span
+                    id="seatCountText">0</span>/6):</span>
+                <div id="roomCodeDisplay" style="display:none; margin-top:0.25rem;">
+                  <span style="font-size:0.74rem; color:var(--text-muted);">Code: </span>
                   <span id="roomCodeText" class="room-badge" style="cursor:pointer;" title="Tap to copy code"
                     onclick="copyTableCode()">------</span>
                   <button id="shareLinkBtn" class="btn"
-                    style="padding:0.35rem 0.65rem; font-size:0.75rem; margin-left:0.4rem;" onclick="copyTableLink()">📋
-                    Copy Link</button>
+                    style="padding:0.25rem 0.5rem; font-size:0.68rem; margin-left:0.3rem;" onclick="copyTableLink()">📋
+                    Link</button>
                 </div>
               </div>
-              <button id="startGameBtn" class="btn btn-gold" onclick="startGame()" disabled>🎴 Deal Cards & Start (0
-                Coins)</button>
+              <button id="startGameBtn" class="btn btn-gold" onclick="startGame()" disabled>🎴 Deal & Start</button>
             </div>
 
             <div id="lobbySeatsContainer" class="lobby-players-list"></div>
-            <p id="networkStatusText" style="font-size:0.78rem; color:#9ca3af; margin-top:0.35rem;"></p>
+            <p id="networkStatusText" style="font-size:0.72rem; color:#9ca3af; margin-top:0.25rem;"></p>
           </div>
         </div>
       </div>
@@ -826,112 +877,73 @@
 
     <!-- ================= ACTIVE GAME SCREEN ================= -->
     <section id="gameScreen">
-      <!-- Top Court & Treasury Bar -->
-      <div class="court-bar">
-        <div class="court-stat">
-          <div class="coin-icon">₹</div>
-          <div>
-            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Central Treasury</div>
-            <div style="font-weight:700; font-size:0.98rem;"><span id="treasuryCoinsText">50</span> Coins</div>
-          </div>
+      <!-- Slim Red Top Turn Interface -->
+      <div id="turnTopBar" class="turn-top-bar">
+        <div class="turn-indicator-left">
+          <span class="turn-dot"></span>
+          <span id="turnStatusHeader">WAITING...</span>
         </div>
-
-        <div class="court-stat">
-          <div style="font-size:1.45rem;">🎴</div>
-          <div>
-            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Court Deck (FIFO)
-            </div>
-            <div style="font-weight:700; font-size:0.95rem;">
-              <span id="courtDeckCountText">15</span> Cards <span
-                style="font-size:0.72rem; color:#34d399; font-weight:500;">(Draw Top ↑ • Return Bottom ↓)</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="court-stat">
-          <div>
-            <div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">Current Turn</div>
-            <div id="turnStatusHeader" style="font-weight:700; font-size:1rem; color:#fbbf24;">Waiting...</div>
-          </div>
+        <div class="court-mini-stats">
+          <span>🪙 <strong id="treasuryCoinsText">50</strong></span>
+          <span>🎴 <strong id="courtDeckCountText">15</strong></span>
         </div>
       </div>
 
       <!-- No-Bluff Proof Reveal Banner -->
       <div id="proofBanner" class="proof-banner" style="display:none;">
-        <div style="display:flex; align-items:center; gap:0.9rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
           <img id="proofCardImg" class="proof-card-thumb" src="" alt="Revealed Card" />
           <div>
-            <div id="proofBannerTitle" style="font-weight:800; font-size:1.02rem; color:#34d399;"></div>
-            <div id="proofBannerSub" style="font-size:0.82rem; color:#d1fae5; margin-top:0.2rem;"></div>
+            <div id="proofBannerTitle" style="font-weight:800; font-size:0.74rem; color:#34d399;"></div>
+            <div id="proofBannerSub" style="font-size:0.64rem; color:#d1fae5;"></div>
           </div>
         </div>
-        <button class="btn" onclick="dismissProofBanner()">✓ Dismiss</button>
+        <button class="btn" onclick="dismissProofBanner()">✓ OK</button>
       </div>
 
       <!-- Dynamic Challenge / Block / Quiet Card Return Banner -->
       <div id="phaseBanner" class="phase-banner" style="display:none;">
         <div id="phaseBannerTitle" class="phase-title"></div>
-        <div id="phaseBannerSub" style="font-size:0.83rem; color:#fecdd3;"></div>
+        <div id="phaseBannerSub" style="font-size:0.65rem; color:#fecdd3;"></div>
         <div id="phaseBannerButtons" class="response-controls"></div>
       </div>
 
-      <div class="game-layout">
-        <!-- LEFT COLUMN: MAIN ACTION SCREEN -->
-        <div>
-          <!-- Compact Player List (Coins & Card Counts Only) -->
-          <div id="compactSeatsGrid" style="display:flex; flex-wrap:wrap; gap:0.55rem; margin-bottom:1.15rem;"></div>
+      <!-- Compact Player List (Coins & Card Counts Only) -->
+      <div id="compactSeatsGrid"></div>
 
-          <!-- Big Visual Button for My Cards -->
-          <button id="bigPeekBtn" class="btn"
-            style="width:100%; padding:1rem; font-size:1.15rem; font-weight:700; justify-content:center; margin-bottom:0.75rem; border-width:2px;"
-            onclick="toggleCardPrivacy()">
-            🙈 SECRET CARDS HIDDEN (TAP TO PEEK)
-          </button>
+      <!-- Squarish Peek Button for My Cards -->
+      <button id="bigPeekBtn" class="btn" onclick="toggleCardPrivacy()">
+        🙈 SECRET CARDS HIDDEN (TAP TO PEEK)
+      </button>
 
-          <!-- My Dedicated Card Area (Collapsible) -->
-          <div id="myCardsArea" class="cards-row" style="display:none; margin-bottom:1.25rem;"></div>
+      <!-- My Dedicated Card Area (Collapsible) -->
+      <div id="myCardsArea" class="cards-row" style="display:none;"></div>
 
-          <!-- Turn Actions Panel -->
-          <div class="command-panel">
-            <div
-              style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.7rem; flex-wrap:wrap; gap:0.5rem;">
-              <h3 style="font-family:'Cinzel',serif; font-size:1rem; color:#fbbf24;">
-                ⚡ Turn Actions & Character Claims
-              </h3>
-              <span id="mandatoryCoupWarning" style="display:none; color:#fb7185; font-size:0.78rem; font-weight:700;">
-                ⚠️ 10+ Coins: You MUST launch a Coup!
-              </span>
-            </div>
-
-            <div class="action-category-title">General Actions (No Character Needed)</div>
-            <div class="actions-grid" id="generalActionsGrid"></div>
-
-            <div class="action-category-title">Character Claims (Truth or Bluff)</div>
-            <div class="actions-grid" id="characterActionsGrid"></div>
-          </div>
+      <!-- Turn Actions & Single-Line Character Claims Panel -->
+      <div class="command-panel">
+        <div class="action-category-title">
+          <span>General Actions</span>
+          <span id="mandatoryCoupWarning" style="display:none; color:#fb7185; font-size:0.62rem; font-weight:700;">
+            ⚠️ 10+ Coins: Must Coup!
+          </span>
         </div>
+        <div class="general-actions-grid" id="generalActionsGrid"></div>
 
-        <!-- RIGHT COLUMN: TABLE LOG & CHEAT SHEET -->
-        <div style="display:flex; flex-direction:column; gap:1rem;">
-          <div class="panel" style="padding:0.95rem;">
-            <h4 style="font-family:'Cinzel',serif; margin-bottom:0.6rem; color:#fbbf24; font-size:0.95rem;">📜 Table
-              Action Log</h4>
-            <div id="gameLogContainer" class="log-box"></div>
-          </div>
+        <div class="action-category-title" style="margin-top:0.15rem;">
+          <span>Character Claims (1-Line • Truth or Bluff)</span>
+        </div>
+        <div class="char-actions-grid" id="characterActionsGrid"></div>
+      </div>
 
-          <div class="panel" style="padding:0.95rem; font-size:0.76rem;">
-            <h4 style="font-family:'Cinzel',serif; margin-bottom:0.45rem; color:#fbbf24; font-size:0.9rem;">🛡️
-              Character Reference</h4>
-            <div style="display:flex; flex-direction:column; gap:0.38rem; color:#d1d5db;">
-              <div><strong style="color:#c084fc;">🟣 Duke:</strong> Tax (+3 Coins) • Blocks Foreign Aid</div>
-              <div><strong style="color:#f87171;">🔴 Assassin:</strong> Assassinate (-3 Coins) • Blocked by Contessa
-              </div>
-              <div><strong style="color:#60a5fa;">🔵 Captain:</strong> Steal (+2 Coins) • Blocked by Captain/Ambassador
-              </div>
-              <div><strong style="color:#34d399;">🟢 Ambassador:</strong> Exchange (Top 2 / Bot 2) • Blocks Steal</div>
-              <div><strong style="color:#f472b6;">🩷 Contessa:</strong> Blocks Assassination</div>
-            </div>
-          </div>
+      <!-- Compact Bottom Table Log & Micro Cheat Bar -->
+      <div class="bottom-info-row">
+        <div id="gameLogContainer" class="log-box"></div>
+        <div class="micro-ref-bar">
+          <strong style="color:#c084fc;">Duke:</strong> +3 / Blk Aid &nbsp;•&nbsp;
+          <strong style="color:#f87171;">Assassin:</strong> -3 Kill &nbsp;•&nbsp;
+          <strong style="color:#60a5fa;">Captain:</strong> Steal 2 / Blk Steal &nbsp;•&nbsp;
+          <strong style="color:#34d399;">Ambass:</strong> Swap 2 / Blk Steal &nbsp;•&nbsp;
+          <strong style="color:#f472b6;">Contessa:</strong> Blk Kill
         </div>
       </div>
     </section>
@@ -942,90 +954,69 @@
   <div id="rulesModal" class="modal-backdrop">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 style="font-family:'Cinzel',serif; color:#fbbf24; font-size:1.2rem;">📜 COUP Rules & Deck Mechanics</h2>
+        <h2 style="font-family:'Cinzel',serif; color:#fbbf24; font-size:1rem;">📜 COUP Rules & Deck Mechanics</h2>
         <button class="btn" onclick="closeModal('rulesModal')">✕ Close</button>
       </div>
 
-      <div style="font-size:0.85rem; line-height:1.55; color:#e5e7eb; display:flex; flex-direction:column; gap:0.9rem;">
+      <div
+        style="font-size:0.78rem; line-height:1.45; color:#e5e7eb; display:flex; flex-direction:column; gap:0.65rem;">
         <div>
-          <h3 style="color:#fbbf24; margin-bottom:0.2rem;">1. Setup & Ordered Deck (2–6 Players)</h3>
+          <h3 style="color:#fbbf24; margin-bottom:0.15rem;">1. Setup & Ordered Deck (2–6 Players)</h3>
           <p>
-            The Court Deck contains exactly <strong>15 Cards</strong> (3× Duke, 3× Assassin, 3× Captain, 3× Ambassador,
-            3× Contessa).
-            Every player starts with <strong>0 Coins</strong> and <strong>2 Face-Down Cards</strong> dealt from the top
-            of the deck.
-            The Court Deck order is strictly preserved: cards drawn always come from the <strong>TOP</strong>, and cards
-            returned always go into the <strong>BOTTOM</strong>.
+            The Court Deck has <strong>15 Cards</strong> (3 each of Duke, Assassin, Captain, Ambassador, Contessa).
+            Every player starts with <strong>0 Coins</strong> and <strong>2 Cards</strong>.
+            Cards drawn come from the <strong>TOP</strong>, and returned cards go to the <strong>BOTTOM</strong>.
           </p>
         </div>
 
         <div>
-          <h3 style="color:#fbbf24; margin-bottom:0.2rem;">2. Actions & Counteractions</h3>
+          <h3 style="color:#fbbf24; margin-bottom:0.15rem;">2. Actions & Counteractions</h3>
           <table class="rules-table">
             <thead>
               <tr>
                 <th>Character / Action</th>
                 <th>Action Effect</th>
-                <th>Counteraction (Block)</th>
+                <th>Block</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td><strong>General — Income</strong></td>
-                <td>Take +1 Coin from the Treasury.</td>
-                <td><em>Cannot be blocked or challenged.</em></td>
+                <td><strong>Income</strong></td>
+                <td>+1 Coin</td>
+                <td><em>Unblockable</em></td>
               </tr>
               <tr>
-                <td><strong>General — Foreign Aid</strong></td>
-                <td>Take +2 Coins from the Treasury.</td>
-                <td>Blocked by any player claiming <strong>Duke</strong>.</td>
+                <td><strong>Foreign Aid</strong></td>
+                <td>+2 Coins</td>
+                <td>Blocked by <strong>Duke</strong></td>
               </tr>
               <tr>
-                <td><strong>General — Coup</strong></td>
-                <td>Pay 7 Coins. Target loses 1 card (mandatory at 10+ coins).</td>
-                <td><em>Unblockable & Unchallengeable.</em></td>
+                <td><strong>Coup</strong></td>
+                <td>-7 Coins, target loses 1 card</td>
+                <td><em>Unblockable</em></td>
               </tr>
               <tr>
                 <td><strong style="color:#c084fc;">Duke — Tax</strong></td>
-                <td>Take +3 Coins from the Treasury.</td>
-                <td>Blocks <strong>Foreign Aid</strong>.</td>
+                <td>+3 Coins</td>
+                <td>Blocks Foreign Aid</td>
               </tr>
               <tr>
-                <td><strong style="color:#f87171;">Assassin — Assassinate</strong></td>
-                <td>Pay 3 Coins. Target loses 1 card.</td>
-                <td>Blocked by target claiming <strong>Contessa</strong>.</td>
+                <td><strong style="color:#f87171;">Assassin — Kill</strong></td>
+                <td>-3 Coins, target loses 1 card</td>
+                <td>Target can Call Bluff on Assassin OR Block (Contessa)</td>
               </tr>
               <tr>
                 <td><strong style="color:#60a5fa;">Captain — Steal</strong></td>
-                <td>Steal up to 2 Coins from a target player.</td>
-                <td>Blocked by target claiming <strong>Captain</strong> or <strong>Ambassador</strong>.</td>
+                <td>Steal up to 2 Coins</td>
+                <td>Target just taps Block (holds Captain or Ambassador)</td>
               </tr>
               <tr>
-                <td><strong style="color:#34d399;">Ambassador — Exchange</strong></td>
-                <td>Draw 2 cards from Top of Court Deck, keep your live count, quietly put 2 cards into Bottom of Court
-                  Deck.</td>
-                <td>Blocks <strong>Steal</strong>.</td>
-              </tr>
-              <tr>
-                <td><strong style="color:#f472b6;">Contessa — Block</strong></td>
-                <td><em>Reactive only.</em></td>
-                <td>Blocks <strong>Assassinate</strong>.</td>
+                <td><strong style="color:#34d399;">Ambassador — Swap</strong></td>
+                <td>Draw 2 from Top, return 2 to Bottom</td>
+                <td>Blocks Steal</td>
               </tr>
             </tbody>
           </table>
-        </div>
-
-        <div>
-          <h3 style="color:#fbbf24; margin-bottom:0.2rem;">3. Challenges & Card Visibility</h3>
-          <ul style="padding-left:1.2rem; display:flex; flex-direction:column; gap:0.35rem;">
-            <li><strong>When Challenged & You Have the Card (No Bluff):</strong> Your card is <strong>shown to the
-                table</strong> to prove you were not bluffing. That card is then placed at the <strong>bottom of the
-                Court Deck</strong>, and you draw a replacement card from the <strong>top of the Court Deck</strong>.
-              The challenger loses 1 card.</li>
-            <li><strong>When Caught Bluffing (Or Losing a Card):</strong> Your card is <strong>not shown</strong> to the
-              other players. You quietly choose 1 of your cards to put into the <strong>bottom of the Court
-                Deck</strong>, reducing your active card count by 1.</li>
-          </ul>
         </div>
       </div>
     </div>
@@ -1033,29 +1024,28 @@
 
   <!-- ================= MODAL 2: TARGET SELECTION ================= -->
   <div id="targetModal" class="modal-backdrop">
-    <div class="modal-content" style="max-width:440px;">
+    <div class="modal-content" style="max-width:360px;">
       <div class="modal-header">
-        <h3 style="font-family:'Cinzel',serif; color:#fbbf24;">Select Target Player</h3>
+        <h3 style="font-family:'Cinzel',serif; color:#fbbf24; font-size:0.92rem;">Select Target Player</h3>
         <button class="btn" onclick="closeModal('targetModal')">✕ Cancel</button>
       </div>
-      <div id="targetPlayersList" style="display:flex; flex-direction:column; gap:0.55rem;"></div>
+      <div id="targetPlayersList" style="display:flex; flex-direction:column; gap:0.4rem;"></div>
     </div>
   </div>
 
   <!-- ================= MODAL 3: AMBASSADOR EXCHANGE ================= -->
   <div id="exchangeModal" class="modal-backdrop">
-    <div class="modal-content" style="max-width:640px;">
+    <div class="modal-content" style="max-width:520px;">
       <div class="modal-header">
-        <h3 style="font-family:'Cinzel',serif; color:#34d399;">🟢 Ambassador Exchange (Top Draw ↑ / Bottom Return ↓)
-        </h3>
+        <h3 style="font-family:'Cinzel',serif; color:#34d399; font-size:0.92rem;">🟢 Ambassador Exchange</h3>
       </div>
-      <p id="exchangeInstructionText" style="font-size:0.84rem; color:var(--text-muted); margin-bottom:1rem;"></p>
+      <p id="exchangeInstructionText" style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.65rem;"></p>
       <div id="exchangeCardsContainer"
-        style="display:grid; grid-template-columns:repeat(auto-fit, minmax(135px, 1fr)); gap:0.8rem; margin-bottom:1.15rem;">
+        style="display:grid; grid-template-columns:repeat(2, 1fr); gap:0.5rem; margin-bottom:0.75rem;">
       </div>
-      <button id="confirmExchangeBtn" class="btn btn-emerald" style="width:100%; justify-content:center;"
+      <button id="confirmExchangeBtn" class="btn btn-emerald" style="width:100%; padding:0.55rem;"
         onclick="submitAmbassadorExchange()" disabled>
-        Confirm Cards to Keep (Unchosen Go to Bottom of Deck)
+        Confirm Cards to Keep
       </button>
     </div>
   </div>
@@ -1063,7 +1053,7 @@
   <!-- ================= GAME ENGINE & NETWORKING SCRIPT ================= -->
   <script>
     /*************************************************************************
-     * 1. ROLES & IMAGE FOLDER WIRING (/images/*.jpg with rounded corners)
+     * 1. ROLES & IMAGE FOLDER WIRING
      *************************************************************************/
     const ROLES = {
       Duke: { name: 'Duke', color: '#a855f7', file: 'images/duke.jpg' },
@@ -1091,13 +1081,13 @@
 
     function getBuiltInSvgDataUri(role) {
       const svgs = {
-        box: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#1e1b2e"/><circle cx="150" cy="185" r="82" fill="#831843" stroke="#f472b6" stroke-width="3"/><path d="M72 330 L102 195 L135 275 L165 275 L198 195 L228 330 Z" fill="#be123c"/><circle cx="150" cy="180" r="38" fill="#fbcfe8"/><text x="150" y="75" text-anchor="middle" fill="#fff" font-family="Cinzel,serif" font-weight="900" font-size="44" letter-spacing="8">COUP</text></svg>`,
-        Duke: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#2e1065"/><circle cx="150" cy="145" r="76" fill="#581c87" stroke="#c084fc" stroke-width="3"/><path d="M90 290 C90 215, 210 215, 210 290 Z" fill="#7e22ce"/><circle cx="150" cy="135" r="36" fill="#d8b4fe"/><circle cx="95" cy="70" r="15" fill="#eab308"/><circle cx="205" cy="70" r="15" fill="#eab308"/><circle cx="150" cy="52" r="15" fill="#eab308"/></svg>`,
-        Assassin: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#450a0a"/><circle cx="150" cy="145" r="76" fill="#7f1d1d" stroke="#f87171" stroke-width="3"/><path d="M85 290 L110 185 L190 185 L215 290 Z" fill="#1f2937"/><path d="M105 155 L150 80 L195 155 L180 195 L120 195 Z" fill="#111827" stroke="#f87171" stroke-width="2"/><rect x="122" y="138" width="56" height="10" rx="5" fill="#ef4444"/></svg>`,
-        Captain: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#172554"/><circle cx="150" cy="145" r="76" fill="#1e3a8a" stroke="#60a5fa" stroke-width="3"/><path d="M80 290 C85 215, 215 215, 220 290 Z" fill="#1d4ed8"/><circle cx="150" cy="142" r="35" fill="#bfdbfe"/><polygon points="108,118 192,118 178,92 122,92" fill="#1e40af" stroke="#facc15" stroke-width="2"/></svg>`,
-        Ambassador: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#064e3b"/><circle cx="150" cy="145" r="76" fill="#065f46" stroke="#34d399" stroke-width="3"/><path d="M90 290 C95 215, 205 215, 210 290 Z" fill="#047857"/><circle cx="150" cy="138" r="35" fill="#a7f3d0"/><rect x="92" y="185" width="32" height="46" rx="5" fill="#10b981" stroke="#fff" stroke-width="2"/><rect x="178" y="178" width="32" height="46" rx="5" fill="#10b981" stroke="#fff" stroke-width="2"/></svg>`,
-        Contessa: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#831843"/><circle cx="150" cy="145" r="76" fill="#9d174d" stroke="#f472b6" stroke-width="3"/><path d="M72 290 L102 155 L135 235 L165 235 L198 155 L228 290 Z" fill="#be123c"/><circle cx="150" cy="140" r="36" fill="#fbcfe8"/></svg>`,
-        Hidden: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="18" fill="#111827"/><rect x="18" y="18" width="264" height="384" rx="14" fill="none" stroke="#c9a24d" stroke-width="2" stroke-dasharray="8,6"/><circle cx="150" cy="210" r="52" fill="none" stroke="#c9a24d" stroke-width="2"/><text x="150" y="218" text-anchor="middle" fill="#c9a24d" font-family="Cinzel,serif" font-weight="900" font-size="24" letter-spacing="4">COUP</text></svg>`
+        box: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="8" fill="#1e1b2e"/><circle cx="150" cy="185" r="82" fill="#831843" stroke="#f472b6" stroke-width="3"/><path d="M72 330 L102 195 L135 275 L165 275 L198 195 L228 330 Z" fill="#be123c"/><circle cx="150" cy="180" r="38" fill="#fbcfe8"/><text x="150" y="75" text-anchor="middle" fill="#fff" font-family="Cinzel,serif" font-weight="900" font-size="44" letter-spacing="8">COUP</text></svg>`,
+        Duke: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="8" fill="#2e1065"/><circle cx="150" cy="145" r="76" fill="#581c87" stroke="#c084fc" stroke-width="3"/><path d="M90 290 C90 215, 210 215, 210 290 Z" fill="#7e22ce"/><circle cx="150" cy="135" r="36" fill="#d8b4fe"/><circle cx="95" cy="70" r="15" fill="#eab308"/><circle cx="205" cy="70" r="15" fill="#eab308"/><circle cx="150" cy="52" r="15" fill="#eab308"/></svg>`,
+        Assassin: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="8" fill="#450a0a"/><circle cx="150" cy="145" r="76" fill="#7f1d1d" stroke="#f87171" stroke-width="3"/><path d="M85 290 L110 185 L190 185 L215 290 Z" fill="#1f2937"/><path d="M105 155 L150 80 L195 155 L180 195 L120 195 Z" fill="#111827" stroke="#f87171" stroke-width="2"/><rect x="122" y="138" width="56" height="10" rx="5" fill="#ef4444"/></svg>`,
+        Captain: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="8" fill="#172554"/><circle cx="150" cy="145" r="76" fill="#1e3a8a" stroke="#60a5fa" stroke-width="3"/><path d="M80 290 C85 215, 215 215, 220 290 Z" fill="#1d4ed8"/><circle cx="150" cy="142" r="35" fill="#bfdbfe"/><polygon points="108,118 192,118 178,92 122,92" fill="#1e40af" stroke="#facc15" stroke-width="2"/></svg>`,
+        Ambassador: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="8" fill="#064e3b"/><circle cx="150" cy="145" r="76" fill="#065f46" stroke="#34d399" stroke-width="3"/><path d="M90 290 C95 215, 205 215, 210 290 Z" fill="#047857"/><circle cx="150" cy="138" r="35" fill="#a7f3d0"/><rect x="92" y="185" width="32" height="46" rx="5" fill="#10b981" stroke="#fff" stroke-width="2"/><rect x="178" y="178" width="32" height="46" rx="5" fill="#10b981" stroke="#fff" stroke-width="2"/></svg>`,
+        Contessa: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="8" fill="#831843"/><circle cx="150" cy="145" r="76" fill="#9d174d" stroke="#f472b6" stroke-width="3"/><path d="M72 290 L102 155 L135 235 L165 235 L198 155 L228 290 Z" fill="#be123c"/><circle cx="150" cy="140" r="36" fill="#fbcfe8"/></svg>`,
+        Hidden: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420"><rect width="300" height="420" rx="8" fill="#111827"/><rect x="18" y="18" width="264" height="384" rx="8" fill="none" stroke="#c9a24d" stroke-width="2" stroke-dasharray="8,6"/><circle cx="150" cy="210" r="52" fill="none" stroke="#c9a24d" stroke-width="2"/><text x="150" y="218" text-anchor="middle" fill="#c9a24d" font-family="Cinzel,serif" font-weight="900" font-size="24" letter-spacing="4">COUP</text></svg>`
       };
       return 'data:image/svg+xml;utf8,' + encodeURIComponent(svgs[role] || svgs.Hidden);
     }
@@ -1108,20 +1098,20 @@
     let gameMode = 'online'; // 'online' | 'local'
     let isHost = false;
     let myPlayerId = 'p_host';
-    let hideMyCards = true; // DEFAULT TRUE: Cards stay hidden for pure tabletop mode
+    let hideMyCards = true;
 
     let lobbyPlayers = [];
     let gameState = {
       started: false,
       treasury: 50,
-      deck: [], // Ordered FIFO queue: index 0 = TOP of deck, last index = BOTTOM of deck
-      players: [], // [{ id, name, coins: 0, cards: [{ role, lost }], alive }]
+      deck: [],
+      players: [],
       turnIndex: 0,
       phase: 'TURN_DECISION',
       pendingAction: null,
       lossQueue: [],
       exchangeData: null,
-      proofReveal: null, // Shown ONLY when a challenged player proves they have the card (No Bluff)
+      proofReveal: null,
       logs: []
     };
 
@@ -1160,9 +1150,9 @@
         const isMe = p && p.id === myPlayerId;
         seat.innerHTML = `
           <div class="seat-num">${i + 1}</div>
-          <div style="font-size:0.86rem; font-weight:${p ? '600' : '400'}; color:${p ? '#fff' : '#6b7280'}; display:flex; align-items:center; gap:0.4rem;">
-            <span>${p ? escapeHtml(p.name) : 'Open Seat'}</span>
-            ${isMe ? '<span style="font-size:0.65rem; background:#3b82f6; color:#fff; padding:0.1rem 0.35rem; border-radius:4px; font-weight:700;">YOU</span>' : ''}
+          <div style="font-size:0.78rem; font-weight:${p ? '600' : '400'}; color:${p ? '#fff' : '#6b7280'}; display:flex; align-items:center; gap:0.3rem;">
+            <span>${p ? escapeHtml(p.name) : 'Open'}</span>
+            ${isMe ? '<span style="font-size:0.55rem; background:#3b82f6; color:#fff; padding:0.08rem 0.28rem; border-radius:2px; font-weight:700;">YOU</span>' : ''}
           </div>
         `;
         container.appendChild(seat);
@@ -1171,11 +1161,7 @@
       const canStart = (gameMode === 'local' || isHost) && lobbyPlayers.length >= 2 && lobbyPlayers.length <= 6;
       const startBtn = document.getElementById('startGameBtn');
       startBtn.disabled = !canStart;
-      if (!isHost && gameMode === 'online') {
-        startBtn.textContent = '⏳ Waiting for Host to Deal...';
-      } else {
-        startBtn.textContent = '🎴 Deal Cards & Start (0 Coins)';
-      }
+      startBtn.textContent = (!isHost && gameMode === 'online') ? '⏳ Waiting for Host...' : '🎴 Deal & Start';
     }
 
     function addLocalPlayer() {
@@ -1202,7 +1188,6 @@
     }
 
     function generateRoomCode() {
-      // Strictly 4-digit code (e.g. 1234)
       return String(Math.floor(1000 + Math.random() * 9000));
     }
 
@@ -1218,8 +1203,7 @@
 
       client.onConnectionLost = (resp) => {
         if (resp.errorCode !== 0) {
-          console.warn('MQTT Connection lost:', resp.errorMessage);
-          document.getElementById('networkStatusText').textContent = '⚠️ Network reconnecting...';
+          document.getElementById('networkStatusText').textContent = '⚠️ Reconnecting...';
           setTimeout(() => {
             if (currentRoomCode) connectMqtt(onSuccess, onError);
           }, 2000);
@@ -1230,7 +1214,6 @@
       const timeout = setTimeout(() => {
         if (!settled) {
           settled = true;
-          console.warn('Broker timeout on', broker.host, 'switching to secondary broker...');
           currentBrokerIndex = (currentBrokerIndex + 1) % MQTT_BROKERS.length;
           connectMqtt(onSuccess, onError);
         }
@@ -1252,7 +1235,6 @@
           if (settled) return;
           settled = true;
           clearTimeout(timeout);
-          console.warn('Broker failed on', broker.host, err);
           currentBrokerIndex = (currentBrokerIndex + 1) % MQTT_BROKERS.length;
           connectMqtt(onSuccess, onError);
         }
@@ -1279,16 +1261,15 @@
       myPlayerId = 'p_host_' + Math.random().toString(36).substring(2, 8);
       lobbyPlayers = [{ id: myPlayerId, name }];
 
-      document.getElementById('networkStatusText').textContent = '📡 Opening table on network...';
+      document.getElementById('networkStatusText').textContent = '📡 Opening table...';
 
       connectMqtt(
         (client) => {
           document.getElementById('roomCodeDisplay').style.display = 'block';
           document.getElementById('roomCodeText').textContent = roomCode;
-          document.getElementById('networkStatusText').textContent = '✅ Table Ready! Have friends enter Table Code: ' + roomCode;
+          document.getElementById('networkStatusText').textContent = '✅ Table Ready! Code: ' + roomCode;
           renderLobbySeats();
 
-          // Subscribe to incoming requests & commands
           client.subscribe(`coup_v2/${roomCode}/join`);
           client.subscribe(`coup_v2/${roomCode}/commands`);
 
@@ -1308,7 +1289,7 @@
           };
         },
         (err) => {
-          document.getElementById('networkStatusText').textContent = '❌ Failed to open table: ' + err;
+          document.getElementById('networkStatusText').textContent = '❌ Failed: ' + err;
         }
       );
     }
@@ -1334,14 +1315,12 @@
 
         renderLobbySeats();
 
-        // Direct confirmation back to the joining peer
         mqttPublish(`coup_v2/${currentRoomCode}/reply/${data.id}`, {
           type: 'JOIN_ACCEPTED',
           lobbyPlayers,
           roomCode: currentRoomCode
         });
 
-        // Broadcast to all seated players
         broadcastLobbyState();
       }
     }
@@ -1350,13 +1329,13 @@
       const name = document.getElementById('playerNameInput').value.trim();
       if (!name) return alert('Please enter your name first!');
       const code = document.getElementById('joinCodeInput').value.trim();
-      if (!code || !/^\d{4}$/.test(code)) return alert('Please enter a valid 4-digit code (e.g. 1234)!');
+      if (!code || !/^\d{4}$/.test(code)) return alert('Enter a valid 4-digit code!');
 
       currentRoomCode = code;
       isHost = false;
       myPlayerId = 'p_' + Math.random().toString(36).substring(2, 8);
 
-      document.getElementById('networkStatusText').textContent = `📡 Connecting to Table ${code}...`;
+      document.getElementById('networkStatusText').textContent = `📡 Connecting to ${code}...`;
 
       connectMqtt(
         (client) => {
@@ -1375,7 +1354,7 @@
                 document.getElementById('roomCodeDisplay').style.display = 'block';
                 document.getElementById('roomCodeText').textContent = code;
                 if (!gameState.started) {
-                  document.getElementById('networkStatusText').textContent = `✅ Seated at Table ${code}! Waiting for Host to deal...`;
+                  document.getElementById('networkStatusText').textContent = `✅ Seated at Table ${code}!`;
                 }
                 renderLobbySeats();
               } else if (data.type === 'GAME_STATE_SYNC') {
@@ -1393,7 +1372,6 @@
 
           function sendJoin() {
             if (!isSeated) {
-              document.getElementById('networkStatusText').textContent = `🤝 Seating at Table ${code}...`;
               mqttPublish(`coup_v2/${code}/join`, {
                 type: 'JOIN_REQUEST',
                 id: myPlayerId,
@@ -1405,16 +1383,9 @@
           sendJoin();
           setTimeout(sendJoin, 400);
           setTimeout(sendJoin, 1200);
-
-          setTimeout(() => {
-            if (!isSeated) {
-              document.getElementById('networkStatusText').textContent =
-                `⚠️ Table "${code}" not responding. Ensure the Host has tapped "Host Table" with code ${code}.`;
-            }
-          }, 4500);
         },
         (err) => {
-          document.getElementById('networkStatusText').textContent = '❌ Connection failed: ' + (err.errorMessage || err);
+          document.getElementById('networkStatusText').textContent = '❌ Connection failed';
         }
       );
     }
@@ -1427,7 +1398,6 @@
       });
     }
 
-    // Strict privacy: Each phone only receives its own live cards; all other cards & deck are hidden
     function syncStateToAll() {
       if (gameMode === 'local') {
         renderGameScreen();
@@ -1471,8 +1441,9 @@
     }
 
     function showActiveGameUI() {
+      document.body.classList.remove('lobby-mode');
       document.getElementById('lobbyScreen').style.display = 'none';
-      document.getElementById('gameScreen').style.display = 'block';
+      document.getElementById('gameScreen').style.display = 'flex';
       document.getElementById('leaveBtn').style.display = 'inline-flex';
     }
 
@@ -1505,7 +1476,7 @@
       if (lobbyPlayers.length < 2) return alert('At least 2 players are needed!');
 
       const deck = createInitialCourtDeck();
-      hideMyCards = true; // Auto-hide cards for tabletop mode when game starts
+      hideMyCards = true;
 
       const players = lobbyPlayers.map(lp => ({
         id: lp.id,
@@ -1530,7 +1501,7 @@
         exchangeData: null,
         proofReveal: null,
         logs: [{
-          text: `🎴 Game started! Every player gets 0 Coins and 2 cards.`,
+          text: `🎴 Game started! 0 Coins & 2 cards dealt.`,
           type: 'win'
         }]
       };
@@ -1560,13 +1531,13 @@
 
     function switchLocalPerspective(playerId) {
       myPlayerId = playerId;
-      hideMyCards = true; // hide when swapping perspectives
+      hideMyCards = true;
       renderGameScreen();
     }
 
     function addLog(text, type = '') {
       gameState.logs.unshift({ text, type });
-      if (gameState.logs.length > 80) gameState.logs.pop();
+      if (gameState.logs.length > 60) gameState.logs.pop();
     }
 
     function getPlayer(id) {
@@ -1583,7 +1554,7 @@
         gameState.phase = 'GAME_OVER';
         const winner = alivePlayers[0];
         if (winner) {
-          addLog(`🏆 VICTORY! ${winner.name} is the last player standing!`, 'win');
+          addLog(`🏆 VICTORY! ${winner.name} wins!`, 'win');
         }
         syncStateToAll();
         return;
@@ -1609,7 +1580,7 @@
     }
 
     /*************************************************************************
-     * 4. AUTHORITATIVE GAME ENGINE (BLUFFS, FIFO DECK, QUIET CARD LOSS)
+     * 4. AUTHORITATIVE GAME ENGINE (ANONYMOUS STEAL BLOCK & ASSASSIN FLOW)
      *************************************************************************/
     function processPlayerCommand(senderId, cmd) {
       const actor = getActivePlayer();
@@ -1634,7 +1605,7 @@
         if (moveType === 'INCOME') {
           actor.coins += 1;
           gameState.treasury = Math.max(0, gameState.treasury - 1);
-          addLog(`🪙 ${actor.name} takes Income (+1 Coin).`);
+          addLog(`🪙 ${actor.name} takes Income (+1).`);
           advanceToNextTurn();
           return;
         }
@@ -1643,13 +1614,13 @@
           if (actor.coins < 7 || !target || !target.alive) return;
           actor.coins -= 7;
           gameState.treasury += 7;
-          addLog(`💥 ${actor.name} launches a COUP (-7 Coins) against ${target.name}!`, 'challenge');
+          addLog(`💥 ${actor.name} COUPS ${target.name} (-7)!`, 'challenge');
           queueQuietCardLoss(target.id, `Couped by ${actor.name}`, 'NEXT_TURN');
           return;
         }
 
         if (moveType === 'FOREIGN_AID') {
-          addLog(`💰 ${actor.name} attempts Foreign Aid (+2 Coins). Any Duke may block.`, 'claim');
+          addLog(`💰 ${actor.name} attempts Foreign Aid (+2).`, 'claim');
           gameState.phase = 'AWAITING_BLOCK_ONLY';
           gameState.pendingAction = {
             type: 'FOREIGN_AID',
@@ -1659,14 +1630,14 @@
             costPaid: 0,
             passedIds: [actor.id],
             blockerId: null,
-            blockerRole: null
+            blockerRoles: []
           };
           syncStateToAll();
           return;
         }
 
         if (moveType === 'TAX') {
-          addLog(`🟣 ${actor.name} claims DUKE to take Tax (+3 Coins).`, 'claim');
+          addLog(`🟣 ${actor.name} claims DUKE for Tax (+3).`, 'claim');
           gameState.phase = 'AWAITING_ACTION_RESPONSE';
           gameState.pendingAction = {
             type: 'TAX',
@@ -1676,7 +1647,7 @@
             costPaid: 0,
             passedIds: [actor.id],
             blockerId: null,
-            blockerRole: null
+            blockerRoles: []
           };
           syncStateToAll();
           return;
@@ -1686,7 +1657,7 @@
           if (actor.coins < 3 || !target || !target.alive) return;
           actor.coins -= 3;
           gameState.treasury += 3;
-          addLog(`🔴 ${actor.name} pays 3 Coins and claims ASSASSIN targeting ${target.name}!`, 'claim');
+          addLog(`🔴 ${actor.name} pays 3 & claims ASSASSIN on ${target.name}!`, 'claim');
           gameState.phase = 'AWAITING_ACTION_RESPONSE';
           gameState.pendingAction = {
             type: 'ASSASSINATE',
@@ -1696,7 +1667,7 @@
             costPaid: 3,
             passedIds: [actor.id],
             blockerId: null,
-            blockerRole: null
+            blockerRoles: []
           };
           syncStateToAll();
           return;
@@ -1704,7 +1675,7 @@
 
         if (moveType === 'STEAL') {
           if (!target || !target.alive) return;
-          addLog(`🔵 ${actor.name} claims CAPTAIN to steal up to 2 Coins from ${target.name}!`, 'claim');
+          addLog(`🔵 ${actor.name} claims CAPTAIN to Steal from ${target.name}!`, 'claim');
           gameState.phase = 'AWAITING_ACTION_RESPONSE';
           gameState.pendingAction = {
             type: 'STEAL',
@@ -1714,14 +1685,14 @@
             costPaid: 0,
             passedIds: [actor.id],
             blockerId: null,
-            blockerRole: null
+            blockerRoles: []
           };
           syncStateToAll();
           return;
         }
 
         if (moveType === 'EXCHANGE') {
-          addLog(`🟢 ${actor.name} claims AMBASSADOR to exchange 2 cards with the Court Deck.`, 'claim');
+          addLog(`🟢 ${actor.name} claims AMBASSADOR to Exchange.`, 'claim');
           gameState.phase = 'AWAITING_ACTION_RESPONSE';
           gameState.pendingAction = {
             type: 'EXCHANGE',
@@ -1731,7 +1702,7 @@
             costPaid: 0,
             passedIds: [actor.id],
             blockerId: null,
-            blockerRole: null
+            blockerRoles: []
           };
           syncStateToAll();
           return;
@@ -1752,7 +1723,7 @@
           if (gameState.phase === 'AWAITING_ACTION_RESPONSE' || gameState.phase === 'AWAITING_BLOCK_ONLY') {
             executeUnblockedAction();
           } else if (gameState.phase === 'AWAITING_BLOCK_RESPONSE') {
-            addLog(`🛡️ Block by ${getPlayer(pa.blockerId).name} (${pa.blockerRole}) stands! Action prevented.`, 'block');
+            addLog(`🛡️ Block by ${getPlayer(pa.blockerId).name} stands! Action stopped.`, 'block');
             advanceToNextTurn();
           }
         } else {
@@ -1761,14 +1732,14 @@
         return;
       }
 
-      // 3. CHALLENGE AN ACTION CLAIM
+      // 3. CHALLENGE AN ACTION CLAIM (e.g., Target calls bluff on Assassin before blocking!)
       if (cmd.action === 'CHALLENGE_ACTION' && gameState.phase === 'AWAITING_ACTION_RESPONSE') {
         const pa = gameState.pendingAction;
         const challenger = getPlayer(cmd.actingPlayerId || senderId);
         const claimer = getPlayer(pa.actorId);
         if (!challenger || !claimer || challenger.id === claimer.id) return;
 
-        addLog(`⚡ ${challenger.name} challenges ${claimer.name}'s claim of ${pa.claimedRole}!`, 'challenge');
+        addLog(`⚡ ${challenger.name} calls bluff on ${claimer.name}'s ${pa.claimedRole}!`, 'challenge');
 
         const matchingCardIndex = claimer.cards.findIndex(c => !c.lost && c.role === pa.claimedRole);
 
@@ -1780,53 +1751,60 @@
           gameState.proofReveal = {
             playerName: claimer.name,
             role: provenRole,
-            detail: `${claimer.name} showed [${provenRole}] (No Bluff!), placed it at the BOTTOM of the Court Deck, and drew a new card from the TOP.`
+            detail: `${claimer.name} showed [${provenRole}], put it at Deck Bottom, and drew a replacement.`
           };
 
-          addLog(`✅ NO BLUFF! ${claimer.name} shows [${provenRole}] to the table, puts it at the bottom of the deck, and draws a new card from the top! ${challenger.name} must quietly return 1 card to the deck.`, 'win');
-          queueQuietCardLoss(challenger.id, `Lost challenge against ${claimer.name}'s ${provenRole}`, 'RESOLVE_ACTION');
+          addLog(`✅ NO BLUFF! ${claimer.name} had [${provenRole}]! ${challenger.name} loses 1 card.`, 'win');
+          queueQuietCardLoss(challenger.id, `Lost bluff call vs ${claimer.name}'s ${provenRole}`, 'RESOLVE_ACTION');
         } else {
           if (pa.type === 'ASSASSINATE' && pa.costPaid > 0) {
             claimer.coins += pa.costPaid;
             gameState.treasury = Math.max(0, gameState.treasury - pa.costPaid);
-            addLog(`❌ BLUFF! ${claimer.name} does not have ${pa.claimedRole} (3 Coins refunded). ${claimer.name} must quietly put 1 card into the bottom of the deck.`, 'challenge');
+            addLog(`❌ BLUFF CAUGHT! ${claimer.name} had no ${pa.claimedRole} (3 Coins refunded) & loses 1 card!`, 'challenge');
           } else {
-            addLog(`❌ BLUFF! ${claimer.name} does not have ${pa.claimedRole}. ${claimer.name} must quietly put 1 card into the bottom of the deck.`, 'challenge');
+            addLog(`❌ BLUFF CAUGHT! ${claimer.name} had no ${pa.claimedRole} & loses 1 card!`, 'challenge');
           }
           queueQuietCardLoss(claimer.id, `Caught bluffing ${pa.claimedRole}`, 'NEXT_TURN');
         }
         return;
       }
 
-      // 4. DECLARE A BLOCK
+      // 4. DECLARE A BLOCK (No card mentioned for Steal or Assassinate!)
       if (cmd.action === 'DECLARE_BLOCK' && (gameState.phase === 'AWAITING_ACTION_RESPONSE' || gameState.phase === 'AWAITING_BLOCK_ONLY')) {
         const pa = gameState.pendingAction;
         const blocker = getPlayer(cmd.actingPlayerId || senderId);
-        const blockRole = cmd.blockRole;
         if (!blocker || !blocker.alive || blocker.id === pa.actorId) return;
 
         if ((pa.type === 'ASSASSINATE' || pa.type === 'STEAL') && blocker.id !== pa.targetId) return;
 
         pa.blockerId = blocker.id;
-        pa.blockerRole = blockRole;
+        if (pa.type === 'STEAL') {
+          pa.blockerRoles = ['Captain', 'Ambassador']; // Target doesn't declare which one!
+        } else if (pa.type === 'ASSASSINATE') {
+          pa.blockerRoles = ['Contessa'];
+        } else if (pa.type === 'FOREIGN_AID') {
+          pa.blockerRoles = ['Duke'];
+        }
+
         pa.passedIds = [blocker.id];
         gameState.phase = 'AWAITING_BLOCK_RESPONSE';
 
-        addLog(`🛡️ ${blocker.name} claims ${blockRole.toUpperCase()} to block ${getPlayer(pa.actorId).name}'s ${pa.type}!`, 'block');
+        addLog(`🛡️ ${blocker.name} BLOCKS ${getPlayer(pa.actorId).name}'s ${pa.type}!`, 'block');
         syncStateToAll();
         return;
       }
 
-      // 5. CHALLENGE A BLOCK
+      // 5. CHALLENGE A BLOCK (Checks if blocker holds ANY valid blocking card for that action)
       if (cmd.action === 'CHALLENGE_BLOCK' && gameState.phase === 'AWAITING_BLOCK_RESPONSE') {
         const pa = gameState.pendingAction;
         const challenger = getPlayer(cmd.actingPlayerId || senderId);
         const blocker = getPlayer(pa.blockerId);
         if (!challenger || !blocker || challenger.id === blocker.id) return;
 
-        addLog(`⚡ ${challenger.name} challenges ${blocker.name}'s ${pa.blockerRole} block!`, 'challenge');
+        const validRoles = pa.blockerRoles || [];
+        addLog(`⚡ ${challenger.name} calls bluff on ${blocker.name}'s Block!`, 'challenge');
 
-        const matchingCardIndex = blocker.cards.findIndex(c => !c.lost && c.role === pa.blockerRole);
+        const matchingCardIndex = blocker.cards.findIndex(c => !c.lost && validRoles.includes(c.role));
 
         if (matchingCardIndex !== -1) {
           const provenRole = blocker.cards[matchingCardIndex].role;
@@ -1836,14 +1814,14 @@
           gameState.proofReveal = {
             playerName: blocker.name,
             role: provenRole,
-            detail: `${blocker.name} showed [${provenRole}] (No Bluff!), placed it at the BOTTOM of the Court Deck, and drew a new card from the TOP.`
+            detail: `${blocker.name} proved Block with [${provenRole}], put it at Deck Bottom, and drew a new card.`
           };
 
-          addLog(`✅ NO BLUFF! ${blocker.name} shows [${provenRole}] to the table, puts it at the bottom of the deck, and draws a new card from the top! Block succeeds & ${challenger.name} loses 1 card.`, 'win');
-          queueQuietCardLoss(challenger.id, `Lost challenge against ${blocker.name}'s ${provenRole} block`, 'NEXT_TURN');
+          addLog(`✅ BLOCK VALID! ${blocker.name} showed [${provenRole}]! Block stands & ${challenger.name} loses 1 card.`, 'win');
+          queueQuietCardLoss(challenger.id, `Lost bluff call vs ${blocker.name}'s block`, 'NEXT_TURN');
         } else {
-          addLog(`❌ BLOCK BLUFF! ${blocker.name} does not have ${pa.blockerRole}. ${blocker.name} must quietly put 1 card into the bottom of the deck, and the ${pa.type} goes through!`, 'challenge');
-          queueQuietCardLoss(blocker.id, `Caught bluffing ${pa.blockerRole} block`, 'RESOLVE_ACTION');
+          addLog(`❌ BLOCK BLUFF CAUGHT! ${blocker.name} loses 1 card & ${pa.type} goes through!`, 'challenge');
+          queueQuietCardLoss(blocker.id, `Caught bluffing block`, 'RESOLVE_ACTION');
         }
         return;
       }
@@ -1860,14 +1838,14 @@
         card.lost = true;
         card.role = 'Hidden';
 
-        addLog(`📥 ${loser.name} quietly puts 1 card into the bottom of the Court Deck (${currentLoss.reason}).`, 'challenge');
+        addLog(`📥 ${loser.name} returns 1 card to Deck Bottom (${currentLoss.reason}).`, 'challenge');
 
         const stillAlive = loser.cards.some(c => !c.lost);
         if (!stillAlive) {
           loser.alive = false;
           gameState.treasury += loser.coins;
           loser.coins = 0;
-          addLog(`⚰️ ${loser.name} has 0 cards remaining and is out of the game!`, 'challenge');
+          addLog(`⚰️ ${loser.name} is eliminated!`, 'challenge');
         }
 
         gameState.lossQueue.shift();
@@ -1903,7 +1881,7 @@
 
         returnedRoles.forEach(r => putCardInBottom(r));
 
-        addLog(`🟢 ${player.name} kept ${ex.keepCount} card(s) and quietly put ${returnedRoles.length} card(s) into the bottom of the Court Deck.`);
+        addLog(`🟢 ${player.name} completed Ambassador Exchange.`);
         advanceToNextTurn();
       }
     }
@@ -1929,7 +1907,7 @@
         player.alive = false;
         gameState.treasury += player.coins;
         player.coins = 0;
-        addLog(`📥 ${player.name} quietly puts their last card into the bottom of the Court Deck (${reason}) and is eliminated!`, 'challenge');
+        addLog(`📥 ${player.name} loses last card (${reason}) & is out!`, 'challenge');
 
         if (nextCallbackType === 'RESOLVE_ACTION') executeUnblockedAction();
         else advanceToNextTurn();
@@ -1955,12 +1933,12 @@
       if (pa.type === 'FOREIGN_AID') {
         actor.coins += 2;
         gameState.treasury = Math.max(0, gameState.treasury - 2);
-        addLog(`💰 ${actor.name} takes Foreign Aid (+2 Coins).`);
+        addLog(`💰 ${actor.name} takes Foreign Aid (+2).`);
         advanceToNextTurn();
       } else if (pa.type === 'TAX') {
         actor.coins += 3;
         gameState.treasury = Math.max(0, gameState.treasury - 3);
-        addLog(`🟣 ${actor.name} collects Duke's Tax (+3 Coins).`);
+        addLog(`🟣 ${actor.name} collects Tax (+3).`);
         advanceToNextTurn();
       } else if (pa.type === 'STEAL') {
         if (target && target.alive) {
@@ -1995,7 +1973,7 @@
     }
 
     /*************************************************************************
-     * 5. UI RENDERING (NEW COMPACT UI FOR MAINS SCREEN)
+     * 5. UI RENDERING (RED TOP BAR, 1-LINE CLAIMS, COMPACT ZERO-SCROLL)
      *************************************************************************/
     let pendingMoveWaitingTarget = null;
     let selectedExchangeIndices = [];
@@ -2006,27 +1984,28 @@
 
       const activePlayer = getActivePlayer();
       const me = getPlayer(myPlayerId) || gameState.players[0];
+      const isMyTurn = activePlayer && me && activePlayer.id === me.id && gameState.phase !== 'GAME_OVER';
+
+      const topBar = document.getElementById('turnTopBar');
+      topBar.classList.toggle('my-turn-active', isMyTurn);
 
       document.getElementById('turnStatusHeader').textContent =
         gameState.phase === 'GAME_OVER'
-          ? '🏆 Game Over'
-          : `${activePlayer.name}'s Turn`;
+          ? '🏆 GAME OVER'
+          : (isMyTurn ? `YOUR TURN — ${activePlayer.name}` : `TURN: ${activePlayer.name}`);
 
-      // Check if we MUST force open cards (e.g. forced to lose a card)
       const currentLoss = gameState.phase === 'AWAITING_LOSS' ? gameState.lossQueue[0] : null;
       const mustPickToLose = currentLoss && currentLoss.playerId === me.id;
       if (mustPickToLose) {
-        hideMyCards = false; // Force open so they can click one
+        hideMyCards = false;
       }
 
-      // Update Big Peek Button
       const peekBtn = document.getElementById('bigPeekBtn');
       peekBtn.innerHTML = hideMyCards ? '🙈 SECRET CARDS HIDDEN (TAP TO PEEK)' : '👀 HIDE MY CARDS';
       peekBtn.style.borderColor = hideMyCards ? '#3b82f6' : '#f59e0b';
       peekBtn.style.background = hideMyCards ? '#1e293b' : 'rgba(245, 158, 11, 0.15)';
       peekBtn.style.color = hideMyCards ? '#fff' : '#fbbf24';
 
-      // Update My Cards Area Visibility
       const myCardsArea = document.getElementById('myCardsArea');
       if (hideMyCards) {
         myCardsArea.style.display = 'none';
@@ -2060,18 +2039,18 @@
         const activeCards = p.cards.filter(c => !c.lost).length;
 
         const el = document.createElement('div');
-        el.style.flex = "1 1 calc(33% - 0.5rem)";
-        el.style.minWidth = "130px";
         el.className = `mini-pod ${isTurn ? 'active-turn' : ''} ${!p.alive ? 'eliminated' : ''}`;
 
         el.innerHTML = `
-          <div style="display:flex; align-items:center; gap:0.3rem;">
-            <span style="font-weight:700; font-size:0.86rem; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:85px;">${escapeHtml(p.name)}</span>
-            ${isMe ? '<span class="badge badge-you" style="font-size:0.5rem; padding:0.1rem 0.25rem;">YOU</span>' : ''}
-            ${isTurn ? '<span class="badge badge-turn" style="font-size:0.5rem; padding:0.1rem 0.25rem;">TURN</span>' : ''}
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:0.2rem;">
+            <span style="font-weight:700; font-size:0.72rem; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(p.name)}</span>
+            <div style="display:flex; gap:0.15rem; flex-shrink:0;">
+              ${isMe ? '<span class="badge badge-you">YOU</span>' : ''}
+              ${isTurn ? '<span class="badge badge-turn">TURN</span>' : ''}
+            </div>
           </div>
-          <div style="font-size:0.8rem; color:#9ca3af; margin-top:0.15rem; font-family:'JetBrains Mono', monospace;">
-             🎴 ${activeCards} &nbsp;|&nbsp; 🪙 <strong style="color:#fde047; font-size:1.05rem;">${p.coins}</strong>
+          <div style="font-size:0.68rem; color:#9ca3af; font-family:'JetBrains Mono', monospace;">
+            🎴${activeCards} • 🪙<strong style="color:#fde047; font-size:0.82rem;">${p.coins}</strong>
           </div>
         `;
         grid.appendChild(el);
@@ -2085,29 +2064,28 @@
       me.cards.forEach((card, cIdx) => {
         if (card.lost) {
           area.innerHTML += `
-             <div class="influence-card returned-slot">
-               <div style="font-size:1.4rem; opacity:0.5; margin-bottom:0.25rem;">📥</div>
-               <div style="font-size:0.75rem; font-weight:700; color:#9ca3af;">LOST CARD</div>
-               <div style="font-size:0.65rem; color:#6b7280; margin-top:0.15rem;">Returned to Deck</div>
-             </div>
-           `;
+            <div class="influence-card returned-slot">
+              <div style="font-size:0.68rem; font-weight:700; color:#9ca3af;">📥 LOST CARD</div>
+              <div style="font-size:0.55rem; color:#6b7280;">In Deck Bottom</div>
+            </div>
+          `;
           return;
         }
 
         const roleMeta = ROLES[card.role];
         area.innerHTML += `
-           <div class="influence-card ${mustPickToLose ? 'selectable' : ''}"
-                onclick="${mustPickToLose ? `selectCardToLose(${cIdx})` : ''}">
-             <img class="card-art" src="${getCardImageSrc(card.role)}" alt="${card.role}" onerror="handleImageFallback(this, '${card.role}')" />
-             <div class="card-label-bar">
-               <div class="card-role-name" style="color:${roleMeta ? roleMeta.color : '#cbd5e1'};">
-                 ${card.role.toUpperCase()}
-               </div>
-               <div class="card-role-sub">
-                 ${mustPickToLose ? '⬇️ Tap to Put in Deck Bottom' : 'Your Secret Card'}
-               </div>
-             </div>
-           </div>
+          <div class="influence-card ${mustPickToLose ? 'selectable' : ''}"
+               onclick="${mustPickToLose ? `selectCardToLose(${cIdx})` : ''}">
+            <img class="card-art" src="${getCardImageSrc(card.role)}" alt="${card.role}" onerror="handleImageFallback(this, '${card.role}')" />
+            <div class="card-label-bar">
+              <div class="card-role-name" style="color:${roleMeta ? roleMeta.color : '#cbd5e1'};">
+                ${card.role.toUpperCase()}
+              </div>
+              <div class="card-role-sub">
+                ${mustPickToLose ? '⬇️ Tap to Lose Card' : 'Secret Card'}
+              </div>
+            </div>
+          </div>
         `;
       });
     }
@@ -2127,7 +2105,7 @@
       const img = document.getElementById('proofCardImg');
       img.src = getCardImageSrc(pr.role);
       img.onerror = function () { handleImageFallback(this, pr.role); };
-      document.getElementById('proofBannerTitle').textContent = `✅ NO BLUFF! ${pr.playerName} Revealed ${pr.role.toUpperCase()}!`;
+      document.getElementById('proofBannerTitle').textContent = `✅ NO BLUFF: ${pr.playerName} showed ${pr.role.toUpperCase()}!`;
       document.getElementById('proofBannerSub').textContent = pr.detail;
     }
 
@@ -2144,43 +2122,38 @@
 
       const pa = gameState.pendingAction;
 
+      // BEFORE BLOCK: Action declared (Assassinate, Steal, Tax, Exchange)
       if (gameState.phase === 'AWAITING_ACTION_RESPONSE' && pa) {
         banner.style.display = 'flex';
         const actor = getPlayer(pa.actorId);
         const target = pa.targetId ? getPlayer(pa.targetId) : null;
-        title.textContent = `🚨 ${actor.name} claims [${pa.claimedRole}] for ${pa.type}${target ? ' on ' + target.name : ''}!`;
-        sub.textContent = `Players at the table may Challenge Bluff, Block, or Allow (${pa.passedIds.length}/${gameState.players.filter(p => p.alive).length} allowed)`;
+        title.textContent = `🚨 ${actor.name} claims [${pa.claimedRole}] for ${pa.type}${target ? ' → ' + target.name : ''}!`;
+        sub.textContent = pa.type === 'ASSASSINATE'
+          ? `${target ? target.name : 'Target'} can Call Bluff on Assassin OR Block (${pa.passedIds.length}/${gameState.players.filter(p => p.alive).length} passed)`
+          : `Call Bluff, Block, or Allow (${pa.passedIds.length}/${gameState.players.filter(p => p.alive).length} passed)`;
 
         if (me.alive && me.id !== actor.id) {
+          // Call Bluff on the character claim (e.g. Call Bluff on Assassin before blocking!)
           const chalBtn = document.createElement('button');
           chalBtn.className = 'btn btn-crimson';
-          chalBtn.textContent = `🔥 Call Bluff (Challenge ${pa.claimedRole})`;
+          chalBtn.textContent = `🔥 Call Bluff (${pa.claimedRole})`;
           chalBtn.onclick = () => sendCommand({ action: 'CHALLENGE_ACTION', actingPlayerId: me.id });
           btns.appendChild(chalBtn);
 
-          if (pa.type === 'ASSASSINATE' && me.id === pa.targetId) {
+          // Target of Assassinate or Steal just taps "🛡️ Block" without naming a card!
+          if ((pa.type === 'ASSASSINATE' || pa.type === 'STEAL') && me.id === pa.targetId) {
             const bBtn = document.createElement('button');
             bBtn.className = 'btn btn-gold';
-            bBtn.textContent = `🛡️ Block with Contessa`;
-            bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: 'Contessa', actingPlayerId: me.id });
+            bBtn.textContent = `🛡️ Block`;
+            bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', actingPlayerId: me.id });
             btns.appendChild(bBtn);
-          }
-
-          if (pa.type === 'STEAL' && me.id === pa.targetId) {
-            ['Captain', 'Ambassador'].forEach(r => {
-              const bBtn = document.createElement('button');
-              bBtn.className = 'btn btn-gold';
-              bBtn.textContent = `🛡️ Block with ${r}`;
-              bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: r, actingPlayerId: me.id });
-              btns.appendChild(bBtn);
-            });
           }
 
           const alreadyPassed = pa.passedIds.includes(me.id);
           const passBtn = document.createElement('button');
           passBtn.className = 'btn btn-emerald';
           passBtn.disabled = alreadyPassed;
-          passBtn.textContent = alreadyPassed ? '✓ Allowed' : '👍 Allow / Pass';
+          passBtn.textContent = alreadyPassed ? '✓ Allowed' : '👍 Allow';
           passBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', actingPlayerId: me.id });
           btns.appendChild(passBtn);
         }
@@ -2188,24 +2161,25 @@
         if (isHost || gameMode === 'local') {
           const forceBtn = document.createElement('button');
           forceBtn.className = 'btn';
-          forceBtn.textContent = '⏩ Table Agreed (Resolve Now)';
+          forceBtn.textContent = '⏩ Resolve';
           forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
           btns.appendChild(forceBtn);
         }
         return;
       }
 
+      // FOREIGN AID BLOCK WINDOW
       if (gameState.phase === 'AWAITING_BLOCK_ONLY' && pa) {
         banner.style.display = 'flex';
         const actor = getPlayer(pa.actorId);
-        title.textContent = `💰 ${actor.name} is taking Foreign Aid (+2 Coins).`;
-        sub.textContent = `Anyone may claim DUKE to block, or Allow.`;
+        title.textContent = `💰 ${actor.name} takes Foreign Aid (+2).`;
+        sub.textContent = `Anyone may Block (Duke) or Allow.`;
 
         if (me.alive && me.id !== actor.id) {
           const bBtn = document.createElement('button');
           bBtn.className = 'btn btn-gold';
-          bBtn.textContent = `🟣 Claim Duke to Block`;
-          bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', blockRole: 'Duke', actingPlayerId: me.id });
+          bBtn.textContent = `🛡️ Block`;
+          bBtn.onclick = () => sendCommand({ action: 'DECLARE_BLOCK', actingPlayerId: me.id });
           btns.appendChild(bBtn);
 
           const alreadyPassed = pa.passedIds.includes(me.id);
@@ -2220,23 +2194,26 @@
         if (isHost || gameMode === 'local') {
           const forceBtn = document.createElement('button');
           forceBtn.className = 'btn';
-          forceBtn.textContent = '⏩ Table Agreed (Resolve Now)';
+          forceBtn.textContent = '⏩ Resolve';
           forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
           btns.appendChild(forceBtn);
         }
         return;
       }
 
+      // AFTER BLOCK: Someone blocked! Now attacker/table can Call Bluff on the Block or Accept Block
       if (gameState.phase === 'AWAITING_BLOCK_RESPONSE' && pa) {
         banner.style.display = 'flex';
         const blocker = getPlayer(pa.blockerId);
-        title.textContent = `🛡️ ${blocker.name} claims [${pa.blockerRole}] to BLOCK!`;
-        sub.textContent = `Challenge ${blocker.name}'s ${pa.blockerRole} or Accept the Block.`;
+        title.textContent = `🛡️ ${blocker.name} BLOCKS ${pa.type}!`;
+        sub.textContent = pa.type === 'STEAL'
+          ? `Figure out if ${blocker.name} has Captain/Ambassador — Call Bluff or Accept Block!`
+          : `Call Bluff on ${blocker.name}'s Block or Accept Block.`;
 
         if (me.alive && me.id !== blocker.id) {
           const chalBtn = document.createElement('button');
           chalBtn.className = 'btn btn-crimson';
-          chalBtn.textContent = `🔥 Call Bluff (Challenge ${pa.blockerRole})`;
+          chalBtn.textContent = `🔥 Call Bluff`;
           chalBtn.onclick = () => sendCommand({ action: 'CHALLENGE_BLOCK', actingPlayerId: me.id });
           btns.appendChild(chalBtn);
 
@@ -2252,7 +2229,7 @@
         if (isHost || gameMode === 'local') {
           const forceBtn = document.createElement('button');
           forceBtn.className = 'btn';
-          forceBtn.textContent = '⏩ Accept Block Now';
+          forceBtn.textContent = '⏩ Accept Now';
           forceBtn.onclick = () => sendCommand({ action: 'PASS_RESPONSE', forceResolve: true });
           btns.appendChild(forceBtn);
         }
@@ -2263,22 +2240,22 @@
         banner.style.display = 'flex';
         const currentLoss = gameState.lossQueue[0];
         const loser = getPlayer(currentLoss.playerId);
-        title.textContent = `📥 ${loser.name} must quietly put 1 card into the bottom of the Court Deck!`;
+        title.textContent = `📥 ${loser.name} must lose 1 card!`;
         sub.textContent = loser.id === me.id
-          ? `Tap one of your cards below to quietly return it to the bottom of the deck (others will NOT see what card you put back).`
-          : `Waiting for ${loser.name} to quietly return 1 card to the bottom of the deck...`;
+          ? `Tap one of your cards below to return it to Deck Bottom.`
+          : `Waiting for ${loser.name} to return 1 card...`;
         return;
       }
 
       if (gameState.phase === 'GAME_OVER') {
         banner.style.display = 'flex';
         const winner = gameState.players.find(p => p.alive);
-        title.textContent = `👑 ${winner ? winner.name : 'Player'} Wins the Game!`;
-        sub.textContent = `All other players have returned their cards to the deck.`;
+        title.textContent = `👑 ${winner ? winner.name : 'Player'} Wins!`;
+        sub.textContent = `Game Over.`;
         if (isHost || gameMode === 'local') {
           const againBtn = document.createElement('button');
           againBtn.className = 'btn btn-gold';
-          againBtn.textContent = '🔄 Deal New Game (0 Coins)';
+          againBtn.textContent = '🔄 New Game';
           againBtn.onclick = () => startGame();
           btns.appendChild(againBtn);
         }
@@ -2298,57 +2275,58 @@
       const generalActions = [
         {
           id: 'INCOME',
-          title: '🪙 Income (+1 Coin)',
-          desc: 'Take 1 coin from Treasury. Cannot be blocked.',
+          title: '🪙 Income',
+          desc: '+1 Coin',
           disabled: !isMyTurn || mustCoup,
           needsTarget: false
         },
         {
           id: 'FOREIGN_AID',
-          title: '💰 Foreign Aid (+2 Coins)',
-          desc: 'Take 2 coins. Blockable by Duke.',
+          title: '💰 Foreign Aid',
+          desc: '+2 Coins',
           disabled: !isMyTurn || mustCoup,
           needsTarget: false
         },
         {
           id: 'COUP',
-          title: '💥 Launch Coup (-7 Coins)',
-          desc: 'Target player quietly loses 1 card to deck.',
+          title: '💥 Coup',
+          desc: '-7 Coins',
           disabled: !isMyTurn || me.coins < 7,
           needsTarget: true
         }
       ];
 
+      // 4 Character Claims fitted cleanly in 1 horizontal line
       const charActions = [
         {
           id: 'TAX',
           role: 'Duke',
-          title: '🟣 Duke — Tax (+3 Coins)',
-          desc: 'Take 3 coins from the Treasury.',
+          title: '🟣 Duke',
+          desc: 'Tax (+3)',
           disabled: !isMyTurn || mustCoup,
           needsTarget: false
         },
         {
           id: 'ASSASSINATE',
           role: 'Assassin',
-          title: '🔴 Assassin — Assassinate (-3)',
-          desc: 'Pay 3 coins. Target loses 1 card to deck.',
+          title: '🔴 Assassin',
+          desc: 'Kill (-3)',
           disabled: !isMyTurn || mustCoup || me.coins < 3,
           needsTarget: true
         },
         {
           id: 'STEAL',
           role: 'Captain',
-          title: '🔵 Captain — Steal (+2 Coins)',
-          desc: 'Steal up to 2 coins from a target player.',
+          title: '🔵 Captain',
+          desc: 'Steal (+2)',
           disabled: !isMyTurn || mustCoup,
           needsTarget: true
         },
         {
           id: 'EXCHANGE',
           role: 'Ambassador',
-          title: '🟢 Ambassador — Exchange',
-          desc: 'Draw 2 from Deck Top, return 2 to Bottom.',
+          title: '🟢 Ambass.',
+          desc: 'Swap (2)',
           disabled: !isMyTurn || mustCoup,
           needsTarget: false
         }
@@ -2362,7 +2340,7 @@
         btn.disabled = a.disabled;
         btn.onclick = () => triggerTurnMove(a.id, a.needsTarget);
         btn.innerHTML = `
-          <div class="action-btn-header"><span>${a.title}</span></div>
+          <div class="action-btn-title">${a.title}</div>
           <div class="action-btn-desc">${a.desc}</div>
         `;
         genGrid.appendChild(btn);
@@ -2377,11 +2355,9 @@
         btn.disabled = a.disabled;
         btn.onclick = () => triggerTurnMove(a.id, a.needsTarget);
         btn.innerHTML = `
-          <div class="action-btn-header">
-            <span>${a.title}</span>
-            ${!hideMyCards ? `<span class="bluff-pill ${holdsCard ? 'pill-truth' : 'pill-bluff'}">${holdsCard ? '✓ Have' : '🎭 Bluff'}</span>` : ''}
-          </div>
+          <div class="action-btn-title">${a.title}</div>
           <div class="action-btn-desc">${a.desc}</div>
+          ${!hideMyCards ? `<span class="bluff-pill ${holdsCard ? 'pill-truth' : 'pill-bluff'}">${holdsCard ? '✓ Have' : 'Bluff'}</span>` : ''}
         `;
         charGrid.appendChild(btn);
       });
@@ -2404,10 +2380,10 @@
         btn.className = 'btn';
         btn.style.width = '100%';
         btn.style.justifyContent = 'space-between';
-        btn.style.padding = '0.75rem 1rem';
+        btn.style.padding = '0.55rem 0.75rem';
         btn.innerHTML = `
           <span><strong>${escapeHtml(p.name)}</strong> (${p.cards.filter(c => !c.lost).length} cards)</span>
-          <span>🪙 ${p.coins} Coins</span>
+          <span>🪙 ${p.coins}</span>
         `;
         btn.onclick = () => {
           sendCommand({ action: 'DECLARE_ACTION', moveType: pendingMoveWaitingTarget, targetId: p.id });
@@ -2429,7 +2405,7 @@
       const container = document.getElementById('exchangeCardsContainer');
       const confirmBtn = document.getElementById('confirmExchangeBtn');
 
-      instruction.textContent = `Select exactly ${ex.keepCount} card(s) to keep. Unchosen card(s) will be quietly returned to the bottom of the Court Deck.`;
+      instruction.textContent = `Tap exactly ${ex.keepCount} card(s) to keep. Unchosen go to Deck Bottom.`;
       container.innerHTML = '';
       selectedExchangeIndices = [];
       confirmBtn.disabled = true;
@@ -2437,8 +2413,7 @@
       ex.options.forEach((role, idx) => {
         const cardDiv = document.createElement('div');
         cardDiv.className = 'influence-card selectable';
-        cardDiv.style.cursor = 'pointer';
-        cardDiv.style.borderWidth = '3px';
+        cardDiv.style.height = '105px';
         const roleMeta = ROLES[role] || ROLES.Hidden;
 
         cardDiv.innerHTML = `
@@ -2453,20 +2428,20 @@
           const pos = selectedExchangeIndices.indexOf(idx);
           if (pos !== -1) {
             selectedExchangeIndices.splice(pos, 1);
-            cardDiv.style.borderColor = 'rgba(255, 255, 255, 0.18)';
+            cardDiv.style.borderColor = 'rgba(255, 255, 255, 0.2)';
             cardDiv.querySelector('.status-text').textContent = 'Tap to select';
           } else {
             if (selectedExchangeIndices.length >= ex.keepCount) {
               const firstIdx = selectedExchangeIndices.shift();
               const firstEl = container.children[firstIdx];
               if (firstEl) {
-                firstEl.style.borderColor = 'rgba(255, 255, 255, 0.18)';
+                firstEl.style.borderColor = 'rgba(255, 255, 255, 0.2)';
                 firstEl.querySelector('.status-text').textContent = 'Tap to select';
               }
             }
             selectedExchangeIndices.push(idx);
             cardDiv.style.borderColor = '#10b981';
-            cardDiv.querySelector('.status-text').textContent = '✓ KEEPING';
+            cardDiv.querySelector('.status-text').textContent = '✓ KEEP';
           }
           confirmBtn.disabled = selectedExchangeIndices.length !== ex.keepCount;
         };
@@ -2506,13 +2481,14 @@
     }
 
     function resetToLobby() {
-      if (confirm('Are you sure you want to leave the table and return to the lobby?')) {
+      if (confirm('Leave the table and return to the lobby?')) {
         if (mqttClient) {
           try { mqttClient.disconnect(); } catch (e) { }
           mqttClient = null;
         }
         currentRoomCode = '';
         gameState.started = false;
+        document.body.classList.add('lobby-mode');
         document.getElementById('gameScreen').style.display = 'none';
         document.getElementById('lobbyScreen').style.display = 'block';
         document.getElementById('leaveBtn').style.display = 'none';
@@ -2537,7 +2513,7 @@
       const code = document.getElementById('roomCodeText').textContent;
       if (!code || code === '------') return;
       navigator.clipboard.writeText(code).then(() => {
-        alert(`Room Code ${code} copied to clipboard!`);
+        alert(`Room Code ${code} copied!`);
       });
     }
 
@@ -2546,11 +2522,10 @@
       if (!code || code === '------') return;
       const url = `${window.location.origin}${window.location.pathname}?join=${code}`;
       navigator.clipboard.writeText(url).then(() => {
-        alert(`Table link copied to clipboard!\n${url}`);
+        alert(`Link copied!\n${url}`);
       });
     }
 
-    // Initialize lobby on page load
     window.addEventListener('DOMContentLoaded', () => {
       renderLobbySeats();
 
@@ -2559,7 +2534,7 @@
       if (urlCode && /^\d{4}$/.test(urlCode)) {
         document.getElementById('joinCodeInput').value = urlCode;
         selectLobbyTab('online');
-        document.getElementById('networkStatusText').textContent = `Table ${urlCode} detected from link! Enter your name and tap Join Table.`;
+        document.getElementById('networkStatusText').textContent = `Table ${urlCode} detected! Enter your name and tap Join Table.`;
       }
     });
   </script>
