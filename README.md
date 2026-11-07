@@ -1,7 +1,7 @@
 # COUP — Tabletop Digital Companion (2–6 Players)
 
 [![GitHub Pages](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-brightgreen?style=for-the-badge&logo=github)](https://bhaveshbanshiwal.github.io/COUPCX04/)
-[![WebRTC](https://img.shields.io/badge/Multiplayer-PeerJS%20WebRTC-orange?style=for-the-badge&logo=webrtc)](https://peerjs.com/)
+[![Real-Time](https://img.shields.io/badge/Multiplayer-Instant%20WebSocket%20P2P-blue?style=for-the-badge&logo=websocket)](https://bhaveshbanshiwal.github.io/COUPCX04/)
 
 A modern, serverless digital companion for playing **Coup** with 2 to 6 players sitting around a physical table using their phones or laptops instead of physical cards and coins.
 
@@ -9,19 +9,22 @@ A modern, serverless digital companion for playing **Coup** with 2 to 6 players 
 
 ## 🎯 Gameplay Rules & Mechanics
 
-1. **0 Starting Coins for All Player Counts (2–6 Players):**
+1. **4-Digit Quick-Join Codes (e.g. 1234):**
+   - Clean 4-digit numeric codes with native mobile number pad keyboard support (`inputmode="numeric"`).
+   - Zero NAT/firewall delays — connects in under 250ms across cellular 4G/5G, Wi-Fi, and hotspots.
+2. **0 Starting Coins for All Player Counts (2–6 Players):**
    - Every player starts with **0 Coins** and **2 Face-Down Cards**, regardless of whether there are 2, 3, 4, 5, or 6 players.
-2. **Real Ordered FIFO Court Deck:**
+3. **Real Ordered FIFO Court Deck:**
    - The 15-card Court Deck (3× Duke, 3× Assassin, 3× Captain, 3× Ambassador, 3× Contessa) is shuffled only once at initial deal.
    - **Draw from TOP (`deck.shift()`):** New cards (Ambassador exchange, challenge replacement) always come from the top of the stack.
    - **Return to BOTTOM (`deck.push()`):** Cards returned to the deck go straight to the bottom without random reshuffling.
-3. **Strict Card Privacy & Quiet Return:**
+4. **Strict Card Privacy & Quiet Return:**
    - **Proven Claim (No Bluff):** If challenged and telling the truth, your card is revealed to the table in a verification banner, placed at the bottom of the Court Deck, and replaced from the top.
    - **Bluff Caught / Card Lost:** Your lost card is **never shown** to opponents. You quietly select which card to return to the bottom of the Court Deck face-down.
-4. **Tabletop Privacy Shield:**
+5. **Tabletop Privacy Shield:**
    - Features a **"🙈 Hide / 👁️ Peek My Cards"** toggle so players sitting next to each other at the physical table cannot see your screen.
-5. **Zero Backend Required (PeerJS WebRTC Mesh):**
-   - Direct phone-to-phone data channels with keep-alive pings and automatic ICE negotiation.
+6. **Zero Backend Required:**
+   - Instant multi-broker failover (HiveMQ + EMQX) with encrypted per-client topic segregation.
    - Includes **Single-Device Pass & Play** mode for playing on a single shared tablet or laptop.
 
 ---
@@ -30,8 +33,8 @@ A modern, serverless digital companion for playing **Coup** with 2 to 6 players 
 
 ### Online / Mobile Tabletop (Multi-Device)
 1. **Host:** Open [https://bhaveshbanshiwal.github.io/COUPCX04/](https://bhaveshbanshiwal.github.io/COUPCX04/), enter your name, and click **👑 Host Table**.
-2. **Invite:** Share the 5-letter Table Code or click **📋 Copy Link** to send the join link.
-3. **Join:** Friends open the link on their phones, enter their name, and click **Join Table**.
+2. **Invite:** A clean **4-digit Table Code (e.g. 1234)** is generated. Click **📋 Copy Link** to share a direct-join link.
+3. **Join:** Friends open the link or enter the 4-digit code on their phones, enter their name, and click **Join Table**.
 4. **Deal:** Once everyone is seated (2 to 6 players), the host taps **🎴 Deal Cards & Start (0 Coins)**.
 
 ### Single-Device Pass & Play
