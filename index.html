@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#090b10" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="icon" type="image/jpeg" href="images/box.jpg" />
   <title>COUP — Tabletop Digital Companion (2–6 Players)</title>
   <!-- PeerJS for Serverless GitHub Pages WebRTC Multiplayer -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -795,7 +800,8 @@
                 <span style="font-size:0.76rem; color:var(--text-muted); text-transform:uppercase;">Seated Players (<span id="seatCountText">0</span>/6):</span>
                 <div id="roomCodeDisplay" style="display:none; margin-top:0.35rem;">
                   <span style="font-size:0.8rem; color:var(--text-muted);">Table Code: </span>
-                  <span id="roomCodeText" class="room-badge">------</span>
+                  <span id="roomCodeText" class="room-badge" style="cursor:pointer;" title="Tap to copy code" onclick="copyTableCode()">------</span>
+                  <button id="shareLinkBtn" class="btn" style="padding:0.35rem 0.65rem; font-size:0.75rem; margin-left:0.4rem;" onclick="copyTableLink()">📋 Copy Link</button>
                 </div>
               </div>
               <button id="startGameBtn" class="btn btn-gold" onclick="startGame()" disabled>🎴 Deal Cards & Start (0 Coins)</button>
@@ -1110,17 +1116,25 @@
         const p = lobbyPlayers[i];
         const seat = document.createElement('div');
         seat.className = 'lobby-seat' + (p ? ' occupied' : '');
+        const isMe = p && p.id === myPlayerId;
         seat.innerHTML = `
           <div class="seat-num">${i + 1}</div>
-          <div style="font-size:0.86rem; font-weight:${p ? '600' : '400'}; color:${p ? '#fff' : '#6b7280'};">
-            ${p ? escapeHtml(p.name) : 'Open Seat'}
+          <div style="font-size:0.86rem; font-weight:${p ? '600' : '400'}; color:${p ? '#fff' : '#6b7280'}; display:flex; align-items:center; gap:0.4rem;">
+            <span>${p ? escapeHtml(p.name) : 'Open Seat'}</span>
+            ${isMe ? '<span style="font-size:0.65rem; background:#3b82f6; color:#fff; padding:0.1rem 0.35rem; border-radius:4px; font-weight:700;">YOU</span>' : ''}
           </div>
         `;
         container.appendChild(seat);
       }
 
       const canStart = (gameMode === 'local' || isHost) && lobbyPlayers.length >= 2 && lobbyPlayers.length <= 6;
-      document.getElementById('startGameBtn').disabled = !canStart;
+      const startBtn = document.getElementById('startGameBtn');
+      startBtn.disabled = !canStart;
+      if (!isHost && gameMode === 'online') {
+        startBtn.textContent = '⏳ Waiting for Host to Deal...';
+      } else {
+        startBtn.textContent = '🎴 Deal Cards & Start (0 Coins)';
+      }
     }
 
     function addLocalPlayer() {
@@ -1146,7 +1160,22 @@
       renderLobbySeats();
     }
 
-    // PEERJS HOST & CLIENT
+    // PEERJS HOST & CLIENT CONFIGURATION
+    const PEER_CONFIG = {
+      debug: 1,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun3.l.google.com:19302' },
+          { urls: 'stun:stun.services.mozilla.com' }
+        ]
+      }
+    };
+
+    let currentRoomCode = '';
+
     function generateRoomCode() {
       const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
       let code = '';
@@ -1156,24 +1185,38 @@
 
     function hostOnlineRoom() {
       const name = document.getElementById('playerNameInput').value.trim() || 'Host';
+      if (peer) {
+        try { peer.destroy(); } catch (e) {}
+        peer = null;
+      }
+
       const roomCode = generateRoomCode();
+      currentRoomCode = roomCode;
       const fullPeerId = 'COUP_TABLE_' + roomCode;
 
-      document.getElementById('networkStatusText').textContent = 'Opening table room...';
-      peer = new Peer(fullPeerId);
+      document.getElementById('networkStatusText').textContent = '📡 Opening table on network...';
+      peer = new Peer(fullPeerId, PEER_CONFIG);
 
-      peer.on('open', () => {
+      peer.on('open', (id) => {
         isHost = true;
-        myPlayerId = 'host_1';
+        myPlayerId = id;
         lobbyPlayers = [{ id: myPlayerId, name }];
         document.getElementById('roomCodeDisplay').style.display = 'block';
         document.getElementById('roomCodeText').textContent = roomCode;
-        document.getElementById('networkStatusText').textContent = '✅ Table Ready! Have friends enter the 5-letter code on their phones.';
+        document.getElementById('networkStatusText').textContent = '✅ Table Ready! Have friends enter Table Code: ' + roomCode;
         renderLobbySeats();
       });
 
       peer.on('connection', conn => {
+        conn.on('open', () => {
+          clientConnections[conn.peer] = conn;
+          try {
+            conn.send({ type: 'LOBBY_UPDATE', lobbyPlayers });
+          } catch (e) {}
+        });
+
         conn.on('data', data => handleHostIncomingData(conn, data));
+
         conn.on('close', () => {
           delete clientConnections[conn.peer];
           if (!gameState.started) {
@@ -1182,16 +1225,27 @@
             renderLobbySeats();
           }
         });
+
+        conn.on('error', err => {
+          console.warn('Host connection warning:', err);
+        });
       });
 
       peer.on('error', err => {
-        document.getElementById('networkStatusText').textContent = '⚠️ Network notice: ' + err.message;
+        console.error('Host peer error:', err);
+        if (err.type === 'unavailable-id') {
+          hostOnlineRoom();
+        } else {
+          document.getElementById('networkStatusText').textContent = '⚠️ Network notice: ' + (err.message || err.type);
+        }
       });
 
       // Keepalive heartbeat every 5s for smooth mobile tabletop play
       setInterval(() => {
         Object.values(clientConnections).forEach(conn => {
-          if (conn && conn.open) conn.send({ type: 'PING' });
+          if (conn) {
+            try { conn.send({ type: 'PING' }); } catch (e) {}
+          }
         });
       }, 5000);
     }
@@ -1200,38 +1254,104 @@
       const name = document.getElementById('playerNameInput').value.trim();
       if (!name) return alert('Please enter your name first!');
       const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
-      if (!code) return alert('Please enter the Table Code!');
+      if (!code) return alert('Please enter the 5-letter Table Code!');
 
-      document.getElementById('networkStatusText').textContent = 'Joining table...';
-      peer = new Peer();
+      if (peer) {
+        try { peer.destroy(); } catch (e) {}
+        peer = null;
+      }
+
+      currentRoomCode = code;
+      let isJoined = false;
+      document.getElementById('networkStatusText').textContent = '📡 Connecting to signaling server...';
+
+      peer = new Peer(null, PEER_CONFIG);
+
+      const joinTimeout = setTimeout(() => {
+        if (!isJoined) {
+          document.getElementById('networkStatusText').textContent =
+            `⚠️ Connecting is taking longer than expected. Check that Table Code "${code}" is correct and the Host has created the room.`;
+        }
+      }, 8000);
 
       peer.on('open', myId => {
         myPlayerId = myId;
         isHost = false;
-        hostConnection = peer.connect('COUP_TABLE_' + code, { reliable: true });
+        document.getElementById('networkStatusText').textContent = `📡 Locating Table ${code}...`;
+
+        hostConnection = peer.connect('COUP_TABLE_' + code);
+
+        function sendJoinHandshake() {
+          if (hostConnection && !isJoined) {
+            document.getElementById('networkStatusText').textContent = '🤝 Handshaking with Table Host...';
+            try {
+              hostConnection.send({ type: 'JOIN_REQUEST', name });
+            } catch (e) {}
+          }
+        }
 
         hostConnection.on('open', () => {
-          document.getElementById('networkStatusText').textContent = '✅ Seated at Table ' + code + '! Waiting for Host to deal...';
-          hostConnection.send({ type: 'JOIN_REQUEST', name });
+          sendJoinHandshake();
+          setTimeout(sendJoinHandshake, 500);
         });
 
-        hostConnection.on('data', data => handleClientIncomingData(data));
+        hostConnection.on('data', data => {
+          if (data.type === 'JOIN_ACCEPTED' || data.type === 'LOBBY_UPDATE') {
+            isJoined = true;
+            clearTimeout(joinTimeout);
+            document.getElementById('roomCodeDisplay').style.display = 'block';
+            document.getElementById('roomCodeText').textContent = code;
+            document.getElementById('networkStatusText').textContent = `✅ Seated at Table ${code}! Waiting for Host to deal...`;
+          }
+          handleClientIncomingData(data);
+        });
+
+        hostConnection.on('close', () => {
+          if (!gameState.started) {
+            document.getElementById('networkStatusText').textContent = '❌ Disconnected from Table.';
+          }
+        });
+
+        hostConnection.on('error', err => {
+          console.warn('Host connection error:', err);
+          document.getElementById('networkStatusText').textContent = '❌ Connection error: ' + (err.message || err);
+        });
       });
 
       peer.on('error', err => {
-        document.getElementById('networkStatusText').textContent = '❌ Connection error: ' + err.message;
+        clearTimeout(joinTimeout);
+        console.error('Client peer error:', err);
+        if (err.type === 'peer-unavailable') {
+          document.getElementById('networkStatusText').textContent =
+            `❌ Table "${code}" not found! Make sure the host has clicked "Host Table" and has code "${code}".`;
+        } else {
+          document.getElementById('networkStatusText').textContent = '❌ Network error: ' + (err.message || err.type);
+        }
       });
     }
 
     function handleHostIncomingData(conn, data) {
       if (data.type === 'JOIN_REQUEST') {
         if (gameState.started || lobbyPlayers.length >= 6) {
-          conn.send({ type: 'JOIN_REJECTED', reason: 'Table is full or game already in progress.' });
+          try { conn.send({ type: 'JOIN_REJECTED', reason: 'Table is full or game already in progress.' }); } catch (e) {}
           return;
         }
         clientConnections[conn.peer] = conn;
-        lobbyPlayers.push({ id: conn.peer, name: data.name.slice(0, 18) });
+        const playerName = (data.name || 'Player').slice(0, 18);
+        const existing = lobbyPlayers.find(p => p.id === conn.peer);
+        if (!existing) {
+          lobbyPlayers.push({ id: conn.peer, name: playerName });
+        } else {
+          existing.name = playerName;
+        }
         renderLobbySeats();
+
+        // Send direct confirmation back to newly joined peer
+        try {
+          conn.send({ type: 'JOIN_ACCEPTED', lobbyPlayers, roomCode: currentRoomCode, yourId: conn.peer });
+        } catch (e) {}
+
+        // Broadcast updated seats to all peers
         broadcastLobbyState();
       } else if (data.type === 'PLAYER_COMMAND') {
         processPlayerCommand(conn.peer, data.command);
@@ -1240,7 +1360,7 @@
 
     function handleClientIncomingData(data) {
       if (data.type === 'PING') return;
-      if (data.type === 'LOBBY_UPDATE') {
+      if (data.type === 'LOBBY_UPDATE' || data.type === 'JOIN_ACCEPTED') {
         lobbyPlayers = data.lobbyPlayers;
         renderLobbySeats();
       } else if (data.type === 'GAME_STATE_SYNC') {
@@ -1254,7 +1374,9 @@
 
     function broadcastLobbyState() {
       Object.values(clientConnections).forEach(conn => {
-        if (conn && conn.open) conn.send({ type: 'LOBBY_UPDATE', lobbyPlayers });
+        if (conn) {
+          try { conn.send({ type: 'LOBBY_UPDATE', lobbyPlayers }); } catch (e) {}
+        }
       });
     }
 
@@ -2240,6 +2362,8 @@
     function openAmbassadorModal() {
       const ex = gameState.exchangeData;
       if (!ex) return;
+      const modal = document.getElementById('exchangeModal');
+      if (modal.classList.contains('open')) return;
 
       const instruction = document.getElementById('exchangeInstructionText');
       const container = document.getElementById('exchangeCardsContainer');
@@ -2351,9 +2475,35 @@
         .replace(/'/g, '&#039;');
     }
 
+    function copyTableCode() {
+      const code = document.getElementById('roomCodeText').textContent;
+      if (!code || code === '------') return;
+      navigator.clipboard.writeText(code).then(() => {
+        alert(`Room Code ${code} copied to clipboard!`);
+      });
+    }
+
+    function copyTableLink() {
+      const code = document.getElementById('roomCodeText').textContent;
+      if (!code || code === '------') return;
+      const url = `${window.location.origin}${window.location.pathname}?join=${code}`;
+      navigator.clipboard.writeText(url).then(() => {
+        alert(`Table link copied to clipboard!\n${url}`);
+      });
+    }
+
     // Initialize lobby on page load
     window.addEventListener('DOMContentLoaded', () => {
       renderLobbySeats();
+
+      // Auto-populate join code from URL parameter (?join=CODE) or hash (#CODE)
+      const params = new URLSearchParams(window.location.search);
+      const urlCode = (params.get('join') || window.location.hash.replace('#', '')).trim().toUpperCase();
+      if (urlCode && urlCode.length === 5) {
+        document.getElementById('joinCodeInput').value = urlCode;
+        selectLobbyTab('online');
+        document.getElementById('networkStatusText').textContent = `Table ${urlCode} detected from link! Enter your name and tap Join Table.`;
+      }
     });
   </script>
 </body>
